@@ -142,3 +142,83 @@ def get_transactions(user_id):
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
+# ✅ เพิ่ม endpoint สำหรับแก้ไข transaction
+@app.route('/api/transactions/<int:transaction_id>', methods=['PUT'])
+def update_transaction(transaction_id):
+    try:
+        data = request.json
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            return jsonify({"error": "User ID required"}), 400
+            
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
+        cursor = conn.cursor()
+        
+        # ตรวจสอบว่า transaction นี้เป็นของ user นี้หรือไม่
+        cursor.execute(
+            "SELECT id FROM transactions WHERE id = %s AND user_id = %s",
+            (transaction_id, user_id)
+        )
+        if not cursor.fetchone():
+            return jsonify({"error": "Transaction not found or unauthorized"}), 404
+        
+        # อัพเดทข้อมูล
+        cursor.execute('''
+            UPDATE transactions 
+            SET type = %s, amount = %s, description = %s, category = %s, date = %s
+            WHERE id = %s AND user_id = %s
+        ''', (
+            data.get('type'), data.get('amount'),
+            data.get('desc'), data.get('category'),
+            data.get('date'), transaction_id, user_id
+        ))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({"message": "Transaction updated successfully"}), 200
+        
+    except Exception as e:
+        print(f"Update transaction error: {e}")
+        return jsonify({"error": str(e)}), 500
+    
+    # ✅ เพิ่ม endpoint สำหรับลบ transaction
+@app.route('/api/transactions/<int:transaction_id>', methods=['DELETE'])
+def delete_transaction(transaction_id):
+    try:
+        user_id = request.args.get('user_id')
+        
+        if not user_id:
+            return jsonify({"error": "User ID required"}), 400
+            
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
+        cursor = conn.cursor()
+        
+        # ตรวจสอบสิทธิ์
+        cursor.execute(
+            "DELETE FROM transactions WHERE id = %s AND user_id = %s",
+            (transaction_id, user_id)
+        )
+        
+        conn.commit()
+        affected_rows = cursor.rowcount
+        cursor.close()
+        conn.close()
+        
+        if affected_rows > 0:
+            return jsonify({"message": "Transaction deleted successfully"}), 200
+        else:
+            return jsonify({"error": "Transaction not found"}), 404
+            
+    except Exception as e:
+        print(f"Delete transaction error: {e}")
+        return jsonify({"error": str(e)}), 500
