@@ -17,49 +17,86 @@ def home():
 # API สำหรับสมัครสมาชิก
 @app.route('/api/register', methods=['POST'])
 def register():
-    data = request.json
-    username = data.get('username')
-    password = hashlib.sha256(data.get('password').encode()).hexdigest()
-    
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
     try:
-        cursor.execute(
-            "INSERT INTO users (username, password) VALUES (%s, %s)",
-            (username, password)
-        )
-        conn.commit()
-        return jsonify({"message": "Register successful"}), 201
-    except mysql.connector.IntegrityError:
-        return jsonify({"error": "Username already exists"}), 400
-    finally:
-        cursor.close()
-        conn.close()
+        data = request.json
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        username = data.get('username')
+        password = data.get('password')
+        
+        if not username or not password:
+            return jsonify({"error": "Username and password are required"}), 400
+            
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
+        cursor = conn.cursor()
+        
+        try:
+            cursor.execute(
+                "INSERT INTO users (username, password) VALUES (%s, %s)",
+                (username, hashed_password)
+            )
+            conn.commit()
+            return jsonify({"message": "Register successful"}), 201
+        except mysql.connector.IntegrityError:
+            return jsonify({"error": "Username already exists"}), 400
+        finally:
+            cursor.close()
+            conn.close()
+            
+    except Exception as e:
+        print(f"Register error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # API สำหรับ login
 @app.route('/api/login', methods=['POST'])
 def login():
-    data = request.json
-    username = data.get('username')
-    password = hashlib.sha256(data.get('password').encode()).hexdigest()
-    
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    cursor.execute(
-        "SELECT id, username FROM users WHERE username = %s AND password = %s",
-        (username, password)
-    )
-    user = cursor.fetchone()
-    
-    cursor.close()
-    conn.close()
-    
-    if user:
-        return jsonify({"message": "Login successful", "user": user}), 200
-    else:
-        return jsonify({"error": "Invalid credentials"}), 401
+    try:
+        data = request.json
+        
+        # ✅ ตรวจสอบว่ามีข้อมูลหรือไม่
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        username = data.get('username')
+        password = data.get('password')
+        
+        # ✅ ตรวจสอบว่ามี username และ password หรือไม่
+        if not username or not password:
+            return jsonify({"error": "Username and password are required"}), 400
+        
+        # เข้ารหัส password
+        hashed_password = hashlib.sha256(password.encode()).hexdigest()
+        
+        # เชื่อมต่อฐานข้อมูล
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute(
+            "SELECT id, username FROM users WHERE username = %s AND password = %s",
+            (username, hashed_password)
+        )
+        user = cursor.fetchone()
+        
+        cursor.close()
+        conn.close()
+        
+        if user:
+            return jsonify({"message": "Login successful", "user": user}), 200
+        else:
+            return jsonify({"error": "Invalid credentials"}), 401
+            
+    except Exception as e:
+        print(f"Login error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # API สำหรับบันทึกรายการ
 @app.route('/api/transactions', methods=['POST'])
