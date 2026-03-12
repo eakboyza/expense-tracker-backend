@@ -66,3 +66,116 @@ def init_database():
     conn.commit()
     cursor.close()
     conn.close()
+
+
+    # ============================================
+# ✅ ฟังก์ชันใหม่ที่ต้องเพิ่ม (สำหรับ UPDATE)
+# ============================================
+
+# ✅ 1. อัพเดท transaction
+def update_transaction(transaction_id, user_id, transaction_data):
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return False, "Database connection failed"
+            
+        cursor = conn.cursor()
+        
+        # ตรวจสอบว่า transaction นี้เป็นของ user นี้จริงๆ
+        cursor.execute(
+            "SELECT id FROM transactions WHERE id = %s AND user_id = %s",
+            (transaction_id, user_id)
+        )
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return False, "Transaction not found or unauthorized"
+        
+        # อัพเดทข้อมูล
+        cursor.execute('''
+            UPDATE transactions 
+            SET type = %s, 
+                amount = %s, 
+                description = %s, 
+                category = %s, 
+                date = %s
+            WHERE id = %s AND user_id = %s
+        ''', (
+            transaction_data.get('type'),
+            transaction_data.get('amount'),
+            transaction_data.get('desc'),
+            transaction_data.get('category'),
+            transaction_data.get('date'),
+            transaction_id,
+            user_id
+        ))
+        
+        conn.commit()
+        affected_rows = cursor.rowcount
+        cursor.close()
+        conn.close()
+        
+        if affected_rows > 0:
+            return True, "Transaction updated successfully"
+        else:
+            return False, "No changes made"
+            
+    except Exception as e:
+        print(f"Error updating transaction: {e}")
+        return False, str(e)
+
+# ✅ 2. ลบ transaction (optional)
+def delete_transaction(transaction_id, user_id):
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return False, "Database connection failed"
+            
+        cursor = conn.cursor()
+        
+        # ตรวจสอบและลบ
+        cursor.execute(
+            "DELETE FROM transactions WHERE id = %s AND user_id = %s",
+            (transaction_id, user_id)
+        )
+        
+        conn.commit()
+        affected_rows = cursor.rowcount
+        cursor.close()
+        conn.close()
+        
+        if affected_rows > 0:
+            return True, "Transaction deleted successfully"
+        else:
+            return False, "Transaction not found"
+            
+    except Exception as e:
+        print(f"Error deleting transaction: {e}")
+        return False, str(e)
+
+# ✅ 3. ดึง transaction เดียว (optional)
+def get_transaction(transaction_id, user_id):
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return None, "Database connection failed"
+            
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute(
+            "SELECT * FROM transactions WHERE id = %s AND user_id = %s",
+            (transaction_id, user_id)
+        )
+        
+        transaction = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        
+        if transaction:
+            return transaction, "Success"
+        else:
+            return None, "Transaction not found"
+            
+    except Exception as e:
+        print(f"Error getting transaction: {e}")
+        return None, str(e)
