@@ -38,7 +38,11 @@ def init_database():
     conn = get_db_connection()
     cursor = conn.cursor()
     
-    # สร้างตาราง users
+    # ============================================
+    # 1. CREATE TABLES
+    # ============================================
+    
+    # 👤 ตาราง users (มีอยู่แล้ว)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -48,23 +52,7 @@ def init_database():
         )
     ''')
     
-    # สร้างตาราง transactions
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS transactions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            user_id INT NOT NULL,
-            type ENUM('income', 'expense') NOT NULL,
-            amount DECIMAL(10,2) NOT NULL,
-            description TEXT,
-            category VARCHAR(50),
-            date DATE NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )
-    ''')
-    # ========== 🆕 ตารางใหม่ที่ต้องเพิ่ม ==========
-    
-    # 1. 🏦 ตาราง accounts (บัญชี)
+    # 🏦 ตาราง accounts (ใหม่)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS accounts (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -80,7 +68,7 @@ def init_database():
         )
     ''')
     
-    # 2. 📂 ตาราง categories (หมวดหมู่)
+    # 📂 ตาราง categories (ใหม่)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS categories (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -94,7 +82,57 @@ def init_database():
         )
     ''')
     
-    # 3. 🎯 ตาราง budgets (งบประมาณ)
+    # 🏷️ ตาราง tags (ใหม่)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS tags (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            name VARCHAR(50) NOT NULL,
+            color VARCHAR(20) DEFAULT '#6366f1',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE KEY unique_tag_per_user (user_id, name),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+    ''')
+    
+    # 💰 ตาราง transactions (แก้ไขให้มี tag, icon, account_id)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            type ENUM('income', 'expense', 'transfer') NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            description TEXT,
+            category VARCHAR(50),
+            tag VARCHAR(50),
+            icon VARCHAR(10) DEFAULT '📝',
+            date DATE NOT NULL,
+            month_key VARCHAR(7),
+            account_id INT,
+            transfer_to_account_id INT,
+            is_debt_payment BOOLEAN DEFAULT FALSE,
+            original_debt_id INT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (account_id) REFERENCES accounts(id),
+            FOREIGN KEY (transfer_to_account_id) REFERENCES accounts(id)
+        )
+    ''')
+    
+    # 🏷️ ตาราง transaction_tags (เชื่อม transactions กับ tags สำหรับหลาย tags ต่อรายการ)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS transaction_tags (
+            transaction_id INT NOT NULL,
+            tag_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (transaction_id, tag_id),
+            FOREIGN KEY (transaction_id) REFERENCES transactions(id),
+            FOREIGN KEY (tag_id) REFERENCES tags(id)
+        )
+    ''')
+    
+    # 🎯 ตาราง budgets (ใหม่)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS budgets (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -110,7 +148,7 @@ def init_database():
         )
     ''')
     
-    # 4. 💳 ตาราง debts (หนี้สิน)
+    # 💳 ตาราง debts (ใหม่)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS debts (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -132,7 +170,7 @@ def init_database():
         )
     ''')
     
-    # 5. 💸 ตาราง debt_payments (การชำระหนี้)
+    # 💸 ตาราง debt_payments (ใหม่)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS debt_payments (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -147,17 +185,110 @@ def init_database():
         )
     ''')
     
+    # ============================================
+    # 2. CREATE INDEXES (เพื่อความเร็ว)
+    # ============================================
+    
+    print("Creating indexes for better performance...")
+    
+    # 🔍 INDEXES สำหรับ transactions
+    cursor.execute('''
+        CREATE INDEX idx_transactions_user_month 
+        ON transactions(user_id, month_key)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX idx_transactions_date 
+        ON transactions(user_id, date)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX idx_transactions_category 
+        ON transactions(user_id, category)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX idx_transactions_tag 
+        ON transactions(user_id, tag)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX idx_transactions_type 
+        ON transactions(user_id, type)
+    ''')
+    
+    cursor.execute('''
+        CREATE INDEX idx_transactions_account 
+        ON transactions(user_id, account_id)
+    ''')
+    
+    # 🔍 INDEXES สำหรับ accounts
+    cursor.execute('''
+        CREATE INDEX idx_accounts_user 
+        ON accounts(user_id)
+    ''')
+    
+    # 🔍 INDEXES สำหรับ categories
+    cursor.execute('''
+        CREATE INDEX idx_categories_user 
+        ON categories(user_id)
+    ''')
+    
+    # 🔍 INDEXES สำหรับ tags
+    cursor.execute('''
+        CREATE INDEX idx_tags_user 
+        ON tags(user_id)
+    ''')
+    
+    # 🔍 INDEXES สำหรับ transaction_tags
+    cursor.execute('''
+        CREATE INDEX idx_transaction_tags_trans 
+        ON transaction_tags(transaction_id)
+    ''')
+    cursor.execute('''
+        CREATE INDEX idx_transaction_tags_tag 
+        ON transaction_tags(tag_id)
+    ''')
+    
+    # 🔍 INDEXES สำหรับ budgets
+    cursor.execute('''
+        CREATE INDEX idx_budgets_user_month 
+        ON budgets(user_id, month_key)
+    ''')
+    cursor.execute('''
+        CREATE INDEX idx_budgets_category 
+        ON budgets(category_id)
+    ''')
+    
+    # 🔍 INDEXES สำหรับ debts
+    cursor.execute('''
+        CREATE INDEX idx_debts_user 
+        ON debts(user_id)
+    ''')
+    cursor.execute('''
+        CREATE INDEX idx_debts_status 
+        ON debts(user_id, status)
+    ''')
+    
+    # 🔍 INDEXES สำหรับ debt_payments
+    cursor.execute('''
+        CREATE INDEX idx_debt_payments_debt 
+        ON debt_payments(debt_id)
+    ''')
+    cursor.execute('''
+        CREATE INDEX idx_debt_payments_date 
+        ON debt_payments(payment_date)
+    ''')
+    
     conn.commit()
     cursor.close()
     conn.close()
-    print("✅ Database initialized with all tables")
+    print("✅ Database initialized with all tables and indexes")
 
-
-    # ============================================
-# ✅ ฟังก์ชันใหม่ที่ต้องเพิ่ม (สำหรับ UPDATE)
+# ============================================
+# 3. CRUD FUNCTIONS สำหรับ transactions (ที่มีอยู่แล้ว)
 # ============================================
 
-# ✅ 1. อัพเดท transaction
 def update_transaction(transaction_id, user_id, transaction_data):
     try:
         conn = get_db_connection()
@@ -182,15 +313,23 @@ def update_transaction(transaction_id, user_id, transaction_data):
             SET type = %s, 
                 amount = %s, 
                 description = %s, 
-                category = %s, 
-                date = %s
+                category = %s,
+                tag = %s,
+                icon = %s,
+                date = %s,
+                month_key = %s,
+                account_id = %s
             WHERE id = %s AND user_id = %s
         ''', (
             transaction_data.get('type'),
             transaction_data.get('amount'),
             transaction_data.get('desc'),
             transaction_data.get('category'),
+            transaction_data.get('tag'),
+            transaction_data.get('icon'),
             transaction_data.get('date'),
+            transaction_data.get('month_key'),
+            transaction_data.get('account_id'),
             transaction_id,
             user_id
         ))
@@ -209,7 +348,6 @@ def update_transaction(transaction_id, user_id, transaction_data):
         print(f"Error updating transaction: {e}")
         return False, str(e)
 
-# ✅ 2. ลบ transaction (optional)
 def delete_transaction(transaction_id, user_id):
     try:
         conn = get_db_connection()
@@ -218,7 +356,6 @@ def delete_transaction(transaction_id, user_id):
             
         cursor = conn.cursor()
         
-        # ตรวจสอบและลบ
         cursor.execute(
             "DELETE FROM transactions WHERE id = %s AND user_id = %s",
             (transaction_id, user_id)
@@ -238,7 +375,6 @@ def delete_transaction(transaction_id, user_id):
         print(f"Error deleting transaction: {e}")
         return False, str(e)
 
-# ✅ 3. ดึง transaction เดียว (optional)
 def get_transaction(transaction_id, user_id):
     try:
         conn = get_db_connection()
