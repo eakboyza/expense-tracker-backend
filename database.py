@@ -186,99 +186,53 @@ def init_database():
     ''')
     
     # ============================================
-    # 2. CREATE INDEXES (เพื่อความเร็ว)
+    # 2. CREATE INDEXES (ใช้ TRY-EXCEPT เพื่อป้องกัน error)
     # ============================================
     
     print("Creating indexes for better performance...")
     
     # 🔍 INDEXES สำหรับ transactions
-    cursor.execute('''
-        CREATE INDEX idx_transactions_user_month 
-        ON transactions(user_id, month_key)
-    ''')
+    indexes = [
+        "CREATE INDEX idx_transactions_user_month ON transactions(user_id, month_key)",
+        "CREATE INDEX idx_transactions_date ON transactions(user_id, date)",
+        "CREATE INDEX idx_transactions_category ON transactions(user_id, category)",
+        "CREATE INDEX idx_transactions_tag ON transactions(user_id, tag)",
+        "CREATE INDEX idx_transactions_type ON transactions(user_id, type)",
+        "CREATE INDEX idx_transactions_account ON transactions(user_id, account_id)",
+        
+        # 🔍 INDEXES สำหรับ accounts
+        "CREATE INDEX idx_accounts_user ON accounts(user_id)",
+        
+        # 🔍 INDEXES สำหรับ categories
+        "CREATE INDEX idx_categories_user ON categories(user_id)",
+        
+        # 🔍 INDEXES สำหรับ tags
+        "CREATE INDEX idx_tags_user ON tags(user_id)",
+        
+        # 🔍 INDEXES สำหรับ transaction_tags
+        "CREATE INDEX idx_transaction_tags_trans ON transaction_tags(transaction_id)",
+        "CREATE INDEX idx_transaction_tags_tag ON transaction_tags(tag_id)",
+        
+        # 🔍 INDEXES สำหรับ budgets
+        "CREATE INDEX idx_budgets_user_month ON budgets(user_id, month_key)",
+        "CREATE INDEX idx_budgets_category ON budgets(category_id)",
+        
+        # 🔍 INDEXES สำหรับ debts
+        "CREATE INDEX idx_debts_user ON debts(user_id)",
+        "CREATE INDEX idx_debts_status ON debts(user_id, status)",
+        
+        # 🔍 INDEXES สำหรับ debt_payments
+        "CREATE INDEX idx_debt_payments_debt ON debt_payments(debt_id)",
+        "CREATE INDEX idx_debt_payments_date ON debt_payments(payment_date)"
+    ]
     
-    cursor.execute('''
-        CREATE INDEX idx_transactions_date 
-        ON transactions(user_id, date)
-    ''')
-    
-    cursor.execute('''
-        CREATE INDEX idx_transactions_category 
-        ON transactions(user_id, category)
-    ''')
-    
-    cursor.execute('''
-        CREATE INDEX idx_transactions_tag 
-        ON transactions(user_id, tag)
-    ''')
-    
-    cursor.execute('''
-        CREATE INDEX idx_transactions_type 
-        ON transactions(user_id, type)
-    ''')
-    
-    cursor.execute('''
-        CREATE INDEX idx_transactions_account 
-        ON transactions(user_id, account_id)
-    ''')
-    
-    # 🔍 INDEXES สำหรับ accounts
-    cursor.execute('''
-        CREATE INDEX idx_accounts_user 
-        ON accounts(user_id)
-    ''')
-    
-    # 🔍 INDEXES สำหรับ categories
-    cursor.execute('''
-        CREATE INDEX idx_categories_user 
-        ON categories(user_id)
-    ''')
-    
-    # 🔍 INDEXES สำหรับ tags
-    cursor.execute('''
-        CREATE INDEX idx_tags_user 
-        ON tags(user_id)
-    ''')
-    
-    # 🔍 INDEXES สำหรับ transaction_tags
-    cursor.execute('''
-        CREATE INDEX idx_transaction_tags_trans 
-        ON transaction_tags(transaction_id)
-    ''')
-    cursor.execute('''
-        CREATE INDEX idx_transaction_tags_tag 
-        ON transaction_tags(tag_id)
-    ''')
-    
-    # 🔍 INDEXES สำหรับ budgets
-    cursor.execute('''
-        CREATE INDEX idx_budgets_user_month 
-        ON budgets(user_id, month_key)
-    ''')
-    cursor.execute('''
-        CREATE INDEX idx_budgets_category 
-        ON budgets(category_id)
-    ''')
-    
-    # 🔍 INDEXES สำหรับ debts
-    cursor.execute('''
-        CREATE INDEX idx_debts_user 
-        ON debts(user_id)
-    ''')
-    cursor.execute('''
-        CREATE INDEX idx_debts_status 
-        ON debts(user_id, status)
-    ''')
-    
-    # 🔍 INDEXES สำหรับ debt_payments
-    cursor.execute('''
-        CREATE INDEX idx_debt_payments_debt 
-        ON debt_payments(debt_id)
-    ''')
-    cursor.execute('''
-        CREATE INDEX idx_debt_payments_date 
-        ON debt_payments(payment_date)
-    ''')
+    for index_sql in indexes:
+        try:
+            cursor.execute(index_sql)
+            print(f"  ✅ Created: {index_sql[:50]}...")
+        except Exception as e:
+            # ถ้า index มีอยู่แล้ว หรือ error อื่นๆ ให้ข้ามไป
+            print(f"  ⚠️  Skipped: {index_sql[:50]}... ({e})")
     
     conn.commit()
     cursor.close()
