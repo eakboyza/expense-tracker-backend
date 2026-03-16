@@ -128,83 +128,39 @@ def login():
 def get_transactions(user_id):
     """โหลด transactions ทั้งหมดของผู้ใช้"""
     try:
-        print(f"🔍 GET /api/transactions/{user_id} ถูกเรียก")
-        
         # รับพารามิเตอร์สำหรับกรอง
         month = request.args.get('month')
         account = request.args.get('account')
         
-        print(f"📊 พารามิเตอร์: month={month}, account={account}")
-        
         conn = get_db_connection()
         if not conn:
-            print("❌ ไม่สามารถเชื่อมต่อฐานข้อมูล")
             return jsonify({"error": "Database connection failed"}), 500
             
         cursor = conn.cursor(dictionary=True)
         
-        # ✅ ตรวจสอบว่ามีตารางหรือไม่
-        cursor.execute("SHOW TABLES")
-        tables = cursor.fetchall()
-        print(f"📋 ตารางทั้งหมดใน DB: {tables}")
-        
-        # ✅ ตรวจสอบว่ามี user นี้หรือไม่
-        cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
-        user = cursor.fetchone()
-        print(f"👤 ข้อมูลผู้ใช้ id={user_id}: {user}")
-        
-        if not user:
-            print(f"⚠️ ไม่พบผู้ใช้ id={user_id}")
-            return jsonify([]), 200
-        
-        # ✅ นับจำนวน transactions ทั้งหมด
-        cursor.execute("SELECT COUNT(*) as count FROM transactions WHERE user_id = %s", (user_id,))
-        count = cursor.fetchone()
-        print(f"📊 transactions ทั้งหมดของผู้ใช้: {count['count']} รายการ")
-        
-        # ✅ ดู transactions 2 รายการล่าสุด
-        cursor.execute("""
-            SELECT * FROM transactions 
-            WHERE user_id = %s 
-            ORDER BY date DESC 
-            LIMIT 2
-        """, (user_id,))
-        sample = cursor.fetchall()
-        print(f"📝 ตัวอย่าง transactions: {sample}")
-        
-        # ✅ สร้าง query พร้อมกรอง
+        # ✅ แก้ไข: query แบบง่ายก่อน
         query = "SELECT * FROM transactions WHERE user_id = %s"
         params = [user_id]
         
+        # ✅ ถ้ามี month ให้กรอง
         if month:
             query += " AND month_key = %s"
             params.append(month)
         
-        if account and account != 'all':
-            query += " AND (account_id = %s OR transfer_to_account_id = %s)"
-            params.extend([account, account])
-        
         query += " ORDER BY date DESC, created_at DESC"
-        
-        print(f"🔍 SQL Query: {query}")
-        print(f"📦 Params: {params}")
         
         cursor.execute(query, params)
         transactions = cursor.fetchall()
         
-        print(f"✅ พบ {len(transactions)} รายการ")
-        
-        # ถ้าไม่มีข้อมูล ให้ส่ง array ว่าง
-        if not transactions:
-            cursor.close()
-            conn.close()
-            return jsonify([]), 200
-        
-        # แปลงข้อมูลให้ตรงกับ frontend
+        # ✅ แปลงข้อมูลให้ตรงกับ frontend
         result = []
         for t in transactions:
             try:
-                formatted = {
+                # แปลง datetime objects เป็น string
+                date_str = t['date'].strftime('%Y-%m-%d') if t['date'] else ''
+                created_str = t['created_at'].isoformat() if t['created_at'] else None
+                
+                result.append({
                     'id': str(t['id']),
                     'amount': float(t['amount']) if t['amount'] else 0,
                     'type': t['type'] or 'expense',
@@ -212,14 +168,13 @@ def get_transactions(user_id):
                     'icon': t['icon'] or '📝',
                     'desc': t['description'] or t['category'] or '',
                     'tag': t['tag'] or '',
-                    'rawDate': t['date'].strftime('%Y-%m-%d') if t['date'] else '',
-                    'date': t['date'].strftime('%Y-%m-%d') if t['date'] else '',
+                    'rawDate': date_str,
+                    'date': date_str,
                     'monthKey': t['month_key'] or '',
                     'accountId': str(t['account_id']) if t['account_id'] else None,
-                    'createdAt': t['created_at'].isoformat() if t['created_at'] else None,
-                    'updatedAt': t['updated_at'].isoformat() if t['updated_at'] else None
-                }
-                result.append(formatted)
+                    'createdAt': created_str,
+                    'updatedAt': None
+                })
             except Exception as e:
                 print(f"Error formatting transaction {t.get('id')}: {e}")
                 continue
@@ -231,10 +186,10 @@ def get_transactions(user_id):
         return jsonify(result), 200
         
     except Exception as e:
-        print(f"❌ Error getting transactions: {e}")
+        print(f"Error getting transactions: {e}")
         import traceback
         traceback.print_exc()
-        return jsonify([]), 200
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/api/transactions', methods=['POST'])
 def add_transaction():
