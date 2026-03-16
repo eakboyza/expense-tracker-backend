@@ -95,7 +95,7 @@ def init_database():
         )
     ''')
     
-    # 💰 ตาราง transactions (แก้ไขให้มี tag, icon, account_id)
+      # 💰 transactions
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS transactions (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -185,54 +185,64 @@ def init_database():
         )
     ''')
 
-     # ============================================
-    # 2. CHECK AND ADD MISSING COLUMNS (เพิ่มตรงนี้)
+
+  # ============================================
+    # 2. MIGRATION: เพิ่ม column ที่ขาดหายไป
     # ============================================
-    print("Checking for missing columns...")
     
-    # ตรวจสอบและเพิ่ม column tag ใน transactions
-    try:
-        cursor.execute("SHOW COLUMNS FROM transactions LIKE 'tag'")
-        result = cursor.fetchone()
-        if not result:
-            print("Adding 'tag' column to transactions table...")
-            cursor.execute("ALTER TABLE transactions ADD COLUMN tag VARCHAR(50) AFTER category")
-            print("✅ Added tag column")
-    except Exception as e:
-        print(f"Note: {e}")
+    print("🔧 Running database migrations...")
     
-    # ตรวจสอบและเพิ่ม column icon
-    try:
-        cursor.execute("SHOW COLUMNS FROM transactions LIKE 'icon'")
-        result = cursor.fetchone()
-        if not result:
-            print("Adding 'icon' column to transactions table...")
-            cursor.execute("ALTER TABLE transactions ADD COLUMN icon VARCHAR(10) DEFAULT '📝' AFTER tag")
-            print("✅ Added icon column")
-    except Exception as e:
-        print(f"Note: {e}")
+    # รายการ migrations
+    migrations = [
+        {
+            'table': 'transactions',
+            'column': 'tag',
+            'definition': 'VARCHAR(50) AFTER category'
+        },
+        {
+            'table': 'transactions',
+            'column': 'icon',
+            'definition': "VARCHAR(10) DEFAULT '📝' AFTER tag"
+        },
+        {
+            'table': 'transactions',
+            'column': 'month_key',
+            'definition': 'VARCHAR(7) AFTER date'
+        },
+        {
+            'table': 'transactions',
+            'column': 'account_id',
+            'definition': 'INT AFTER month_key'
+        },
+        {
+            'table': 'transactions',
+            'column': 'transfer_to_account_id',
+            'definition': 'INT AFTER account_id'
+        },
+        {
+            'table': 'transactions',
+            'column': 'is_debt_payment',
+            'definition': "BOOLEAN DEFAULT FALSE AFTER transfer_to_account_id"
+        },
+        {
+            'table': 'transactions',
+            'column': 'original_debt_id',
+            'definition': 'INT AFTER is_debt_payment'
+        }
+    ]
     
-    # ตรวจสอบและเพิ่ม column month_key
-    try:
-        cursor.execute("SHOW COLUMNS FROM transactions LIKE 'month_key'")
-        result = cursor.fetchone()
-        if not result:
-            print("Adding 'month_key' column to transactions table...")
-            cursor.execute("ALTER TABLE transactions ADD COLUMN month_key VARCHAR(7) AFTER date")
-            print("✅ Added month_key column")
-    except Exception as e:
-        print(f"Note: {e}")
+    for mig in migrations:
+        try:
+            # ตรวจสอบว่ามี column นี้หรือยัง
+            cursor.execute(f"SHOW COLUMNS FROM {mig['table']} LIKE '{mig['column']}'")
+            if not cursor.fetchone():
+                print(f"➕ Adding {mig['column']} to {mig['table']}...")
+                cursor.execute(f"ALTER TABLE {mig['table']} ADD COLUMN {mig['column']} {mig['definition']}")
+                print(f"✅ Added {mig['column']}")
+        except Exception as e:
+            print(f"⚠️  {mig['column']}: {e}")
+
     
-    # ตรวจสอบและเพิ่ม column account_id
-    try:
-        cursor.execute("SHOW COLUMNS FROM transactions LIKE 'account_id'")
-        result = cursor.fetchone()
-        if not result:
-            print("Adding 'account_id' column to transactions table...")
-            cursor.execute("ALTER TABLE transactions ADD COLUMN account_id INT AFTER month_key")
-            print("✅ Added account_id column")
-    except Exception as e:
-        print(f"Note: {e}")
     
     # ============================================
     # 2. CREATE INDEXES (ใช้ TRY-EXCEPT เพื่อป้องกัน error)
