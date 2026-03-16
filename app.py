@@ -294,6 +294,31 @@ def add_transaction():
         print(f"Error adding transaction: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/debug/transactions/<int:user_id>', methods=['GET'])
+def debug_transactions(user_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # ดู transactions ทั้งหมด
+        cursor.execute("SELECT * FROM transactions WHERE user_id = %s", (user_id,))
+        all_tx = cursor.fetchall()
+        
+        # ดู structure
+        cursor.execute("DESCRIBE transactions")
+        structure = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            'transactions': all_tx,
+            'count': len(all_tx),
+            'structure': structure
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.route('/api/transactions/<int:transaction_id>', methods=['PUT'])
 def update_transaction(transaction_id):
     try:
