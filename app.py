@@ -129,7 +129,7 @@ def get_transactions(user_id):
     """โหลด transactions ทั้งหมดของผู้ใช้"""
     try:
         # รับพารามิเตอร์สำหรับกรอง
-        month = request.args.get('month')  # YYYY-MM
+        month = request.args.get('month')
         account = request.args.get('account')
         
         conn = get_db_connection()
@@ -137,6 +137,11 @@ def get_transactions(user_id):
             return jsonify({"error": "Database connection failed"}), 500
             
         cursor = conn.cursor(dictionary=True)
+        
+        # ✅ ตรวจสอบก่อนว่ามีตารางหรือไม่
+        cursor.execute("SHOW TABLES LIKE 'transactions'")
+        if not cursor.fetchone():
+            return jsonify([]), 200  # ส่ง array ว่างกลับไป
         
         # สร้าง query พร้อมกรอง
         query = "SELECT * FROM transactions WHERE user_id = %s"
@@ -155,8 +160,32 @@ def get_transactions(user_id):
         cursor.execute(query, params)
         transactions = cursor.fetchall()
         
+        # ✅ ถ้าไม่มีข้อมูล ให้ส่ง array ว่าง
+        if not transactions:
+            return jsonify([]), 200
+        
         # แปลงข้อมูลให้ตรงกับ frontend
-        result = [format_transaction_response(t) for t in transactions]
+        result = []
+        for t in transactions:
+            try:
+                result.append({
+                    'id': str(t['id']),
+                    'amount': float(t['amount']) if t['amount'] else 0,
+                    'type': t['type'] or 'expense',
+                    'category': t['category'] or 'อื่นๆ',
+                    'icon': t['icon'] or '📝',
+                    'desc': t['description'] or t['category'] or '',
+                    'tag': t['tag'] or '',
+                    'rawDate': t['date'].strftime('%Y-%m-%d') if t['date'] else '',
+                    'date': t['date'].strftime('%Y-%m-%d') if t['date'] else '',
+                    'monthKey': t['month_key'] or '',
+                    'accountId': str(t['account_id']) if t['account_id'] else None,
+                    'createdAt': t['created_at'].isoformat() if t['created_at'] else None,
+                    'updatedAt': t['updated_at'].isoformat() if t['updated_at'] else None
+                })
+            except Exception as e:
+                print(f"Error formatting transaction {t.get('id')}: {e}")
+                continue
         
         cursor.close()
         conn.close()
@@ -165,7 +194,8 @@ def get_transactions(user_id):
         
     except Exception as e:
         print(f"Error getting transactions: {e}")
-        return jsonify({"error": str(e)}), 500
+        # ✅ ส่ง array ว่างกลับไปเมื่อ error
+        return jsonify([]), 200
 
 @app.route('/api/transactions', methods=['POST'])
 def add_transaction():
