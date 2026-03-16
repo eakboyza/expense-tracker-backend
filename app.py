@@ -478,7 +478,53 @@ def delete_account(account_id):
 # ============================================
 # CATEGORIES API
 # ============================================
-
+# เพิ่มใน app.py หลังจาก register สำเร็จ
+@app.route('/api/init-categories/<int:user_id>', methods=['POST'])
+def init_categories(user_id):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # สร้าง categories เริ่มต้น
+        default_cats = [
+            # income
+            ('income', 'เงินเดือน', '💰'),
+            ('income', 'โบนัส', '🎁'),
+            ('income', 'กำไรลงทุน', '💹'),
+            ('income', 'อื่นๆ', '🏦'),
+            
+            # spending
+            ('spending', 'กิน', '🍱'),
+            ('spending', 'น้ำมัน', '⛽'),
+            ('spending', 'สังคม', '🤝'),
+            ('spending', 'ครอบครัว', '👨‍👩‍👧‍👦'),
+            ('spending', 'ของใช้', '🧺'),
+            ('spending', 'สิ่งบันเทิง', '🎬'),
+            ('spending', 'ท่องเที่ยว', '✈️'),
+            ('spending', 'สุขภาพ', '🏥'),
+            ('spending', 'รถยนต์', '🚗'),
+            
+            # investment
+            ('investment', 'เงินเก็บลูก', '👶'),
+            ('investment', 'สำรองระยะสั้น', '🛡️'),
+            ('investment', 'เก็บเตรียมลงทุน', '💎')
+        ]
+        
+        for cat_type, name, icon in default_cats:
+            cursor.execute('''
+                INSERT INTO categories (user_id, type, name, icon, is_default)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (user_id, cat_type, name, icon, True))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({"message": "Categories initialized"}), 201
+        
+    except Exception as e:
+        print(f"Error init categories: {e}")
+        return jsonify({"error": str(e)}), 500
 @app.route('/api/categories/<int:user_id>', methods=['GET'])
 def get_categories(user_id):
     """โหลดหมวดหมู่ทั้งหมดของผู้ใช้"""
