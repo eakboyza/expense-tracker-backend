@@ -184,6 +184,55 @@ def init_database():
             FOREIGN KEY (account_id) REFERENCES accounts(id)
         )
     ''')
+
+     # ============================================
+    # 2. CHECK AND ADD MISSING COLUMNS (เพิ่มตรงนี้)
+    # ============================================
+    print("Checking for missing columns...")
+    
+    # ตรวจสอบและเพิ่ม column tag ใน transactions
+    try:
+        cursor.execute("SHOW COLUMNS FROM transactions LIKE 'tag'")
+        result = cursor.fetchone()
+        if not result:
+            print("Adding 'tag' column to transactions table...")
+            cursor.execute("ALTER TABLE transactions ADD COLUMN tag VARCHAR(50) AFTER category")
+            print("✅ Added tag column")
+    except Exception as e:
+        print(f"Note: {e}")
+    
+    # ตรวจสอบและเพิ่ม column icon
+    try:
+        cursor.execute("SHOW COLUMNS FROM transactions LIKE 'icon'")
+        result = cursor.fetchone()
+        if not result:
+            print("Adding 'icon' column to transactions table...")
+            cursor.execute("ALTER TABLE transactions ADD COLUMN icon VARCHAR(10) DEFAULT '📝' AFTER tag")
+            print("✅ Added icon column")
+    except Exception as e:
+        print(f"Note: {e}")
+    
+    # ตรวจสอบและเพิ่ม column month_key
+    try:
+        cursor.execute("SHOW COLUMNS FROM transactions LIKE 'month_key'")
+        result = cursor.fetchone()
+        if not result:
+            print("Adding 'month_key' column to transactions table...")
+            cursor.execute("ALTER TABLE transactions ADD COLUMN month_key VARCHAR(7) AFTER date")
+            print("✅ Added month_key column")
+    except Exception as e:
+        print(f"Note: {e}")
+    
+    # ตรวจสอบและเพิ่ม column account_id
+    try:
+        cursor.execute("SHOW COLUMNS FROM transactions LIKE 'account_id'")
+        result = cursor.fetchone()
+        if not result:
+            print("Adding 'account_id' column to transactions table...")
+            cursor.execute("ALTER TABLE transactions ADD COLUMN account_id INT AFTER month_key")
+            print("✅ Added account_id column")
+    except Exception as e:
+        print(f"Note: {e}")
     
     # ============================================
     # 2. CREATE INDEXES (ใช้ TRY-EXCEPT เพื่อป้องกัน error)
