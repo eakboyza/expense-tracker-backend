@@ -190,6 +190,7 @@ def add_transaction():
         else:
             month_key = data.get('month_key')
         
+        # ✅ แก้ไข: เพิ่ม tag ใน VALUES
         cursor.execute('''
             INSERT INTO transactions 
             (user_id, type, amount, description, category, tag, icon, date, month_key, account_id, transfer_to_account_id, is_debt_payment, original_debt_id)
@@ -200,7 +201,7 @@ def add_transaction():
             data.get('amount'),
             data.get('desc'),
             data.get('category'),
-            data.get('tag'),
+            data.get('tag', ''),  # ✅ เพิ่มตรงนี้
             data.get('icon', '📝'),
             data.get('rawDate') or data.get('date'),
             month_key,
@@ -247,19 +248,24 @@ def update_transaction(transaction_id):
         if not cursor.fetchone():
             return jsonify({"error": "Transaction not found or unauthorized"}), 404
         
-        # อัพเดทข้อมูล
+        # ✅ แก้ไข: เพิ่ม tag ใน SET
         cursor.execute('''
             UPDATE transactions 
             SET type = %s, amount = %s, description = %s, category = %s,
                 tag = %s, icon = %s, date = %s, month_key = %s, account_id = %s
             WHERE id = %s AND user_id = %s
         ''', (
-            data.get('type'), data.get('amount'),
-            data.get('desc'), data.get('category'),
-            data.get('tag'), data.get('icon'),
-            data.get('date'), data.get('month_key'),
+            data.get('type'), 
+            data.get('amount'),
+            data.get('desc'), 
+            data.get('category'),
+            data.get('tag', ''),  # ✅ เพิ่มตรงนี้
+            data.get('icon'),
+            data.get('date'), 
+            data.get('month_key'),
             data.get('account_id'),
-            transaction_id, user_id
+            transaction_id, 
+            user_id
         ))
         
         conn.commit()
