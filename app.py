@@ -128,22 +128,51 @@ def login():
 def get_transactions(user_id):
     """โหลด transactions ทั้งหมดของผู้ใช้"""
     try:
+        print(f"🔍 GET /api/transactions/{user_id} ถูกเรียก")
+        
         # รับพารามิเตอร์สำหรับกรอง
         month = request.args.get('month')
         account = request.args.get('account')
         
+        print(f"📊 พารามิเตอร์: month={month}, account={account}")
+        
         conn = get_db_connection()
         if not conn:
+            print("❌ ไม่สามารถเชื่อมต่อฐานข้อมูล")
             return jsonify({"error": "Database connection failed"}), 500
             
         cursor = conn.cursor(dictionary=True)
         
-        # ✅ ตรวจสอบก่อนว่ามีตารางหรือไม่
-        cursor.execute("SHOW TABLES LIKE 'transactions'")
-        if not cursor.fetchone():
-            return jsonify([]), 200  # ส่ง array ว่างกลับไป
+        # ✅ ตรวจสอบว่ามีตารางหรือไม่
+        cursor.execute("SHOW TABLES")
+        tables = cursor.fetchall()
+        print(f"📋 ตารางทั้งหมดใน DB: {tables}")
         
-        # สร้าง query พร้อมกรอง
+        # ✅ ตรวจสอบว่ามี user นี้หรือไม่
+        cursor.execute("SELECT * FROM users WHERE id = %s", (user_id,))
+        user = cursor.fetchone()
+        print(f"👤 ข้อมูลผู้ใช้ id={user_id}: {user}")
+        
+        if not user:
+            print(f"⚠️ ไม่พบผู้ใช้ id={user_id}")
+            return jsonify([]), 200
+        
+        # ✅ นับจำนวน transactions ทั้งหมด
+        cursor.execute("SELECT COUNT(*) as count FROM transactions WHERE user_id = %s", (user_id,))
+        count = cursor.fetchone()
+        print(f"📊 transactions ทั้งหมดของผู้ใช้: {count['count']} รายการ")
+        
+        # ✅ ดู transactions 2 รายการล่าสุด
+        cursor.execute("""
+            SELECT * FROM transactions 
+            WHERE user_id = %s 
+            ORDER BY date DESC 
+            LIMIT 2
+        """, (user_id,))
+        sample = cursor.fetchall()
+        print(f"📝 ตัวอย่าง transactions: {sample}")
+        
+        # ✅ สร้าง query พร้อมกรอง
         query = "SELECT * FROM transactions WHERE user_id = %s"
         params = [user_id]
         
@@ -157,18 +186,25 @@ def get_transactions(user_id):
         
         query += " ORDER BY date DESC, created_at DESC"
         
+        print(f"🔍 SQL Query: {query}")
+        print(f"📦 Params: {params}")
+        
         cursor.execute(query, params)
         transactions = cursor.fetchall()
         
-        # ✅ ถ้าไม่มีข้อมูล ให้ส่ง array ว่าง
+        print(f"✅ พบ {len(transactions)} รายการ")
+        
+        # ถ้าไม่มีข้อมูล ให้ส่ง array ว่าง
         if not transactions:
+            cursor.close()
+            conn.close()
             return jsonify([]), 200
         
         # แปลงข้อมูลให้ตรงกับ frontend
         result = []
         for t in transactions:
             try:
-                result.append({
+                formatted = {
                     'id': str(t['id']),
                     'amount': float(t['amount']) if t['amount'] else 0,
                     'type': t['type'] or 'expense',
@@ -182,7 +218,8 @@ def get_transactions(user_id):
                     'accountId': str(t['account_id']) if t['account_id'] else None,
                     'createdAt': t['created_at'].isoformat() if t['created_at'] else None,
                     'updatedAt': t['updated_at'].isoformat() if t['updated_at'] else None
-                })
+                }
+                result.append(formatted)
             except Exception as e:
                 print(f"Error formatting transaction {t.get('id')}: {e}")
                 continue
@@ -190,11 +227,13 @@ def get_transactions(user_id):
         cursor.close()
         conn.close()
         
+        print(f"✅ ส่งข้อมูล {len(result)} รายการกลับไป")
         return jsonify(result), 200
         
     except Exception as e:
-        print(f"Error getting transactions: {e}")
-        # ✅ ส่ง array ว่างกลับไปเมื่อ error
+        print(f"❌ Error getting transactions: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify([]), 200
 
 @app.route('/api/transactions', methods=['POST'])
