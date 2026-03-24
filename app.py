@@ -38,6 +38,75 @@ def format_transaction_response(transaction):
         'updatedAt': transaction['updated_at'].isoformat() if transaction['updated_at'] else None
     }
 
+@app.route('/api/init-user-data/<int:user_id>', methods=['POST'])
+def init_user_data(user_id):
+    """สร้างข้อมูลเริ่มต้นให้ user ใหม่ (accounts + categories)"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
+        cursor = conn.cursor()
+        
+        # ============================================
+        # 1. สร้างบัญชีเริ่มต้น (accounts)
+        # ============================================
+        default_accounts = [
+            ('บัญชีหลัก', 'savings', '🏦', 0, True),
+            ('เงินสด', 'cash', '💰', 0, False)
+        ]
+        
+        for name, acc_type, icon, balance, is_default in default_accounts:
+            cursor.execute('''
+                INSERT INTO accounts (user_id, name, type, icon, initial_balance, is_default)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            ''', (user_id, name, acc_type, icon, balance, is_default))
+        
+        # ============================================
+        # 2. สร้างหมวดหมู่เริ่มต้น (categories)
+        # ============================================
+        default_categories = [
+            # income
+            ('income', 'เงินเดือน', '💰'),
+            ('income', 'โบนัส', '🎁'),
+            ('income', 'กำไรลงทุน', '💹'),
+            ('income', 'อื่นๆ', '🏦'),
+            # spending
+            ('spending', 'กิน', '🍱'),
+            ('spending', 'น้ำมัน', '⛽'),
+            ('spending', 'สังคม', '🤝'),
+            ('spending', 'ครอบครัว', '👨‍👩‍👧‍👦'),
+            ('spending', 'ของใช้', '🧺'),
+            ('spending', 'สิ่งบันเทิง', '🎬'),
+            ('spending', 'ท่องเที่ยว', '✈️'),
+            ('spending', 'สุขภาพ', '🏥'),
+            ('spending', 'รถยนต์', '🚗'),
+            # investment
+            ('investment', 'เงินเก็บลูก', '👶'),
+            ('investment', 'สำรองระยะสั้น', '🛡️'),
+            ('investment', 'เก็บเตรียมลงทุน', '💎')
+        ]
+        
+        for cat_type, name, icon in default_categories:
+            cursor.execute('''
+                INSERT INTO categories (user_id, type, name, icon, is_default)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (user_id, cat_type, name, icon, True))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            "message": "User data initialized successfully",
+            "accounts_created": 2,
+            "categories_created": 16
+        }), 201
+        
+    except Exception as e:
+        print(f"Error initializing user data: {e}")
+        return jsonify({"error": str(e)}), 500
+
 # ============================================
 # AUTHENTICATION API (มีอยู่แล้ว)
 # ============================================
@@ -70,12 +139,24 @@ def register():
                 (username, hashed_password)
             )
             conn.commit()
-            return jsonify({"message": "Register successful"}), 201
+            user_id = cursor.lastrowid
+            cursor.close()
+            conn.close()
+            
+            import requests
+            init_response = init_user_data(user_id)
+            
+            return jsonify({
+                "message": "Register successful",
+                "user_id": user_id
+            }), 201
+            
         except mysql.connector.IntegrityError:
             return jsonify({"error": "Username already exists"}), 400
         finally:
-            cursor.close()
-            conn.close()
+            if conn.is_connected():
+                cursor.close()
+                conn.close()
             
     except Exception as e:
         print(f"Register error: {e}")
@@ -128,7 +209,6 @@ def login():
 def get_transactions(user_id):
     """โหลด transactions ทั้งหมดของผู้ใช้"""
     try:
-        # รับพารามิเตอร์สำหรับกรอง
         month = request.args.get('month')
         account = request.args.get('account')
         
@@ -138,11 +218,9 @@ def get_transactions(user_id):
             
         cursor = conn.cursor(dictionary=True)
         
-        # ✅ แก้ไข: query แบบง่ายก่อน
         query = "SELECT * FROM transactions WHERE user_id = %s"
         params = [user_id]
         
-        # ✅ ถ้ามี month ให้กรอง
         if month:
             query += " AND month_key = %s"
             params.append(month)
@@ -156,7 +234,6 @@ def get_transactions(user_id):
         result = []
         for t in transactions:
             try:
-                # แปลง datetime objects เป็น string
                 date_str = t['date'].strftime('%Y-%m-%d') if t['date'] else ''
                 created_str = t['created_at'].isoformat() if t['created_at'] else None
                 
@@ -207,10 +284,8 @@ def add_transaction():
             
         cursor = conn.cursor()
         
-        # ✅ ไม่ต้องแปลง accountId เก็บ string ตรงๆ
-        account_id = data.get('accountId')  # อาจเป็น 'default_acc' หรือ 'cash_acc'
+        account_id = data.get('accountId')  
         
-        # ✅ ถ้าเป็นตัวเลขก็เก็บ string ได้
         if account_id is not None:
             account_id = str(account_id)
         
@@ -1254,6 +1329,8 @@ def update_debt_payment(payment_id):
         print(f"Error updating payment: {e}")
         return jsonify({"error": str(e)}), 500
 
+        
+
 @app.route('/api/debt-payments/<int:payment_id>', methods=['DELETE'])
 def delete_debt_payment(payment_id):
     """ลบการชำระหนี้"""
@@ -1287,7 +1364,10 @@ def delete_debt_payment(payment_id):
     except Exception as e:
         print(f"Error deleting payment: {e}")
         return jsonify({"error": str(e)}), 500
+    
+    
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
+
