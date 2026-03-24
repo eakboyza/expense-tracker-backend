@@ -5,6 +5,7 @@ from database import get_db_connection, init_database
 import hashlib
 import json
 from datetime import datetime
+import mysql.connector
 
 app = Flask(__name__)
 CORS(app)  # ให้ Frontend เรียก API ได้
@@ -38,6 +39,63 @@ def format_transaction_response(transaction):
         'updatedAt': transaction['updated_at'].isoformat() if transaction['updated_at'] else None
     }
 
+def create_default_user_data(user_id):
+    """สร้าง accounts และ categories เริ่มต้นให้ user (ไม่ใช่ route)"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return False, "Database connection failed"
+            
+        cursor = conn.cursor()
+        
+        # สร้างบัญชีเริ่มต้น
+        default_accounts = [
+            ('บัญชีหลัก', 'savings', '🏦', 0, True),
+            ('เงินสด', 'cash', '💰', 0, False)
+        ]
+        
+        for name, acc_type, icon, balance, is_default in default_accounts:
+            cursor.execute('''
+                INSERT INTO accounts (user_id, name, type, icon, initial_balance, is_default)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            ''', (user_id, name, acc_type, icon, balance, is_default))
+        
+        # สร้างหมวดหมู่เริ่มต้น
+        default_categories = [
+            ('income', 'เงินเดือน', '💰'),
+            ('income', 'โบนัส', '🎁'),
+            ('income', 'กำไรลงทุน', '💹'),
+            ('income', 'อื่นๆ', '🏦'),
+            ('spending', 'กิน', '🍱'),
+            ('spending', 'น้ำมัน', '⛽'),
+            ('spending', 'สังคม', '🤝'),
+            ('spending', 'ครอบครัว', '👨‍👩‍👧‍👦'),
+            ('spending', 'ของใช้', '🧺'),
+            ('spending', 'สิ่งบันเทิง', '🎬'),
+            ('spending', 'ท่องเที่ยว', '✈️'),
+            ('spending', 'สุขภาพ', '🏥'),
+            ('spending', 'รถยนต์', '🚗'),
+            ('investment', 'เงินเก็บลูก', '👶'),
+            ('investment', 'สำรองระยะสั้น', '🛡️'),
+            ('investment', 'เก็บเตรียมลงทุน', '💎')
+        ]
+        
+        for cat_type, name, icon in default_categories:
+            cursor.execute('''
+                INSERT INTO categories (user_id, type, name, icon, is_default)
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (user_id, cat_type, name, icon, True))
+        
+        conn.commit()
+        cursor.close()
+        conn.close()
+        
+        return True, "User data created"
+        
+    except Exception as e:
+        print(f"Error creating user data: {e}")
+        return False, str(e)
+
 @app.route('/api/init-user-data/<int:user_id>', methods=['POST'])
 def init_user_data(user_id):
     """สร้างข้อมูลเริ่มต้นให้ user ใหม่ (accounts + categories)"""
@@ -47,6 +105,8 @@ def init_user_data(user_id):
             return jsonify({"error": "Database connection failed"}), 500
             
         cursor = conn.cursor()
+
+        
         
         # ============================================
         # 1. สร้างบัญชีเริ่มต้น (accounts)
@@ -143,8 +203,12 @@ def register():
             cursor.close()
             conn.close()
             
-            import requests
-            init_response = init_user_data(user_id)
+            # ✅ แก้ไข: เรียก function helper แทน
+            success, message = create_default_user_data(user_id)
+            
+            if not success:
+                print(f"Warning: {message}")
+                # ไม่ต้อง return error แค่ log ไว้
             
             return jsonify({
                 "message": "Register successful",
@@ -154,12 +218,14 @@ def register():
         except mysql.connector.IntegrityError:
             return jsonify({"error": "Username already exists"}), 400
         finally:
-            if conn.is_connected():
+            if conn and conn.is_connected():
                 cursor.close()
                 conn.close()
             
     except Exception as e:
         print(f"Register error: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/login', methods=['POST'])
