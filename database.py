@@ -114,7 +114,7 @@ def init_database():
             original_debt_id INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES users(id),
+            FOREIGN KEY (user_id) REFERENCES users(id)
             
         )
     ''')
@@ -186,52 +186,53 @@ def init_database():
 
 
   # ============================================
-    # 2. MIGRATION: เพิ่ม column ที่ขาดหายไป
-    # ============================================
-    
-    print("🔧 Running database migrations...")
-    
-    # รายการ migrations
-    migrations = [
-        {
-            'table': 'transactions',
-            'column': 'tag',
-            'definition': 'VARCHAR(50) AFTER category'
-        },
-        {
-            'table': 'transactions',
-            'column': 'icon',
-            'definition': "VARCHAR(10) DEFAULT '📝' AFTER tag"
-        },
-        {
-            'table': 'transactions',
-            'column': 'month_key',
-            'definition': 'VARCHAR(7) AFTER date'
-        },
-        {
-            'table': 'transactions',
-            'column': 'account_id',
-            'definition': 'VARCHAR(50) AFTER month_key',
-            'modify': True  # ✅ เพิ่ม flag บอกว่าเป็นการ modify
-        },
-        {
-            'table': 'transactions',
-            'column': 'transfer_to_account_id',
-            'definition': 'VARCHAR(50) AFTER account_id',
-            'modify': True
-        },
-        {
-            'table': 'transactions',
-            'column': 'is_debt_payment',
-            'definition': "BOOLEAN DEFAULT FALSE AFTER transfer_to_account_id"
-        },
-        {
-            'table': 'transactions',
-            'column': 'original_debt_id',
-            'definition': 'INT AFTER is_debt_payment'
-        }
-    ]
-    
+# 2. MIGRATION: เพิ่ม column ที่ขาดหายไป
+# ============================================
+
+print("🔧 Running database migrations...")
+
+# รายการ migrations
+migrations = [
+    {
+        'table': 'transactions',
+        'column': 'tag',
+        'definition': 'VARCHAR(50) AFTER category'
+    },
+    {
+        'table': 'transactions',
+        'column': 'icon',
+        'definition': "VARCHAR(10) DEFAULT '📝' AFTER tag"
+    },
+    {
+        'table': 'transactions',
+        'column': 'month_key',
+        'definition': 'VARCHAR(7) AFTER date'
+    },
+    {
+        'table': 'transactions',
+        'column': 'account_id',
+        'definition': 'VARCHAR(50)',
+        'modify': True  # ✅ เพิ่ม flag บอกว่าเป็นการ modify
+    },
+    {
+        'table': 'transactions',
+        'column': 'transfer_to_account_id',
+        'definition': 'VARCHAR(50)',
+        'modify': True
+    },
+    {
+        'table': 'transactions',
+        'column': 'is_debt_payment',
+        'definition': "BOOLEAN DEFAULT FALSE"
+    },
+    {
+        'table': 'transactions',
+        'column': 'original_debt_id',
+        'definition': 'INT'
+    }
+]
+
+# ✅ แก้ไข indent: for loop ต้องอยู่เยื้องระดับเดียวกับ migrations
 for mig in migrations:
     try:
         cursor.execute(f"SHOW COLUMNS FROM {mig['table']} LIKE '{mig['column']}'")
