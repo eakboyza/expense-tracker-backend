@@ -649,6 +649,25 @@ def delete_account(account_id):
             
         cursor = conn.cursor()
         
+        # ✅ เพิ่ม: ตรวจสอบว่าบัญชีนี้มีธุรกรรมหรือไม่
+        cursor.execute('''
+            SELECT COUNT(*) FROM transactions 
+            WHERE (account_id = %s OR transfer_to_account_id = %s) 
+            AND user_id = %s
+        ''', (str(account_id), str(account_id), user_id))
+        
+        count = cursor.fetchone()[0]
+        
+        if count > 0:
+            cursor.close()
+            conn.close()
+            return jsonify({
+                "error": f"ไม่สามารถลบบัญชีได้ เพราะมี {count} รายการที่เกี่ยวข้อง",
+                "has_transactions": True,
+                "transaction_count": count
+            }), 400
+        
+        # ✅ ลบบัญชี (ถ้าไม่มีธุรกรรม)
         cursor.execute(
             "DELETE FROM accounts WHERE id = %s AND user_id = %s",
             (account_id, user_id)
