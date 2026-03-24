@@ -108,15 +108,14 @@ def init_database():
             icon VARCHAR(10) DEFAULT '📝',
             date DATE NOT NULL,
             month_key VARCHAR(7),
-            account_id INT,
-            transfer_to_account_id INT,
+            account_id VARCHAR(50),
+            transfer_to_account_id VARCHAR(50),
             is_debt_payment BOOLEAN DEFAULT FALSE,
             original_debt_id INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id),
-            FOREIGN KEY (account_id) REFERENCES accounts(id),
-            FOREIGN KEY (transfer_to_account_id) REFERENCES accounts(id)
+            
         )
     ''')
     
@@ -212,12 +211,14 @@ def init_database():
         {
             'table': 'transactions',
             'column': 'account_id',
-            'definition': 'INT AFTER month_key'
+            'definition': 'VARCHAR(50) AFTER month_key',
+            'modify': True  # ✅ เพิ่ม flag บอกว่าเป็นการ modify
         },
         {
             'table': 'transactions',
             'column': 'transfer_to_account_id',
-            'definition': 'INT AFTER account_id'
+            'definition': 'VARCHAR(50) AFTER account_id',
+            'modify': True
         },
         {
             'table': 'transactions',
@@ -231,16 +232,24 @@ def init_database():
         }
     ]
     
-    for mig in migrations:
-        try:
-            # ตรวจสอบว่ามี column นี้หรือยัง
-            cursor.execute(f"SHOW COLUMNS FROM {mig['table']} LIKE '{mig['column']}'")
-            if not cursor.fetchone():
-                print(f"➕ Adding {mig['column']} to {mig['table']}...")
-                cursor.execute(f"ALTER TABLE {mig['table']} ADD COLUMN {mig['column']} {mig['definition']}")
-                print(f"✅ Added {mig['column']}")
-        except Exception as e:
-            print(f"⚠️  {mig['column']}: {e}")
+for mig in migrations:
+    try:
+        cursor.execute(f"SHOW COLUMNS FROM {mig['table']} LIKE '{mig['column']}'")
+        col_info = cursor.fetchone()
+        
+        if col_info:
+            # ถ้ามี column อยู่แล้ว และต้องการ modify
+            if mig.get('modify'):
+                print(f"🔄 Modifying {mig['column']} in {mig['table']}...")
+                cursor.execute(f"ALTER TABLE {mig['table']} MODIFY COLUMN {mig['column']} {mig['definition']}")
+                print(f"✅ Modified {mig['column']}")
+        else:
+            # ถ้าไม่มี ให้เพิ่ม
+            print(f"➕ Adding {mig['column']} to {mig['table']}...")
+            cursor.execute(f"ALTER TABLE {mig['table']} ADD COLUMN {mig['column']} {mig['definition']}")
+            print(f"✅ Added {mig['column']}")
+    except Exception as e:
+        print(f"⚠️  {mig['column']}: {e}")
 
     
     
