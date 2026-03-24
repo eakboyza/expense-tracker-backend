@@ -33,7 +33,7 @@ def format_transaction_response(transaction):
         'rawDate': transaction['date'].strftime('%Y-%m-%d') if hasattr(transaction['date'], 'strftime') else transaction['date'],
         'date': transaction['date'].strftime('%Y-%m-%d') if hasattr(transaction['date'], 'strftime') else transaction['date'],
         'monthKey': transaction['month_key'],
-        'accountId': str(transaction['account_id']) if transaction['account_id'] else None,
+        'accountId': transaction['account_id'],  # ✅ คืนค่าเป็น string ตามที่เก็บ
         'createdAt': transaction['created_at'].isoformat() if transaction['created_at'] else None,
         'updatedAt': transaction['updated_at'].isoformat() if transaction['updated_at'] else None
     }
@@ -207,14 +207,13 @@ def add_transaction():
             
         cursor = conn.cursor()
         
-        # คำนวณ month_key ถ้าไม่มี
-        if not data.get('month_key') and data.get('rawDate'):
-            date_obj = datetime.strptime(data['rawDate'], '%Y-%m-%d')
-            month_key = f"{date_obj.year}-{str(date_obj.month).zfill(2)}"
-        else:
-            month_key = data.get('month_key')
+        # ✅ ไม่ต้องแปลง accountId เก็บ string ตรงๆ
+        account_id = data.get('accountId')  # อาจเป็น 'default_acc' หรือ 'cash_acc'
         
-        # ✅ แก้ไข: เพิ่ม tag ใน VALUES
+        # ✅ ถ้าเป็นตัวเลขก็เก็บ string ได้
+        if account_id is not None:
+            account_id = str(account_id)
+        
         cursor.execute('''
             INSERT INTO transactions 
             (user_id, type, amount, description, category, tag, icon, date, month_key, account_id, transfer_to_account_id, is_debt_payment, original_debt_id)
@@ -225,11 +224,11 @@ def add_transaction():
             data.get('amount'),
             data.get('desc'),
             data.get('category'),
-            data.get('tag', ''),  # ✅ เพิ่มตรงนี้
+            data.get('tag', ''),
             data.get('icon', '📝'),
             data.get('rawDate') or data.get('date'),
-            month_key,
-            data.get('accountId'),
+            data.get('month_key'),
+            account_id,  # ✅ ส่ง string ตรงๆ
             data.get('transferToAccountId'),
             data.get('isDebtPayment', False),
             data.get('originalDebtId')
@@ -297,7 +296,11 @@ def update_transaction(transaction_id):
         if not cursor.fetchone():
             return jsonify({"error": "Transaction not found or unauthorized"}), 404
         
-        # ✅ แก้ไข: เพิ่ม tag ใน SET
+        # ✅ แปลง account_id เป็น string ถ้ามี
+        account_id = data.get('account_id')
+        if account_id is not None:
+            account_id = str(account_id)
+        
         cursor.execute('''
             UPDATE transactions 
             SET type = %s, amount = %s, description = %s, category = %s,
@@ -308,11 +311,11 @@ def update_transaction(transaction_id):
             data.get('amount'),
             data.get('desc'), 
             data.get('category'),
-            data.get('tag', ''),  # ✅ เพิ่มตรงนี้
+            data.get('tag', ''),
             data.get('icon'),
             data.get('date'), 
             data.get('month_key'),
-            data.get('account_id'),
+            account_id,  # ✅ ส่ง string ตรงๆ
             transaction_id, 
             user_id
         ))
