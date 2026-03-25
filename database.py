@@ -103,6 +103,7 @@ def init_database():
             month_key VARCHAR(7),
             account_id VARCHAR(50),
             transfer_to_account_id VARCHAR(50),
+            transfer_type ENUM('internal', 'as_income', 'receive_income') DEFAULT NULL,
             is_debt_payment BOOLEAN DEFAULT FALSE,
             original_debt_id INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -179,44 +180,49 @@ def init_database():
     print("🔧 Running database migrations...")
     
     migrations = [
-        {
-            'table': 'transactions',
-            'column': 'tag',
-            'definition': 'VARCHAR(50) AFTER category'
-        },
-        {
-            'table': 'transactions',
-            'column': 'icon',
-            'definition': "VARCHAR(10) DEFAULT '📝' AFTER tag"
-        },
-        {
-            'table': 'transactions',
-            'column': 'month_key',
-            'definition': 'VARCHAR(7) AFTER date'
-        },
-        {
-            'table': 'transactions',
-            'column': 'account_id',
-            'definition': 'VARCHAR(50)',
-            'modify': True
-        },
-        {
-            'table': 'transactions',
-            'column': 'transfer_to_account_id',
-            'definition': 'VARCHAR(50)',
-            'modify': True
-        },
-        {
-            'table': 'transactions',
-            'column': 'is_debt_payment',
-            'definition': "BOOLEAN DEFAULT FALSE"
-        },
-        {
-            'table': 'transactions',
-            'column': 'original_debt_id',
-            'definition': 'INT'
-        }
-    ]
+    {
+        'table': 'transactions',
+        'column': 'tag',
+        'definition': 'VARCHAR(50) AFTER category'
+    },
+    {
+        'table': 'transactions',
+        'column': 'icon',
+        'definition': "VARCHAR(10) DEFAULT '📝' AFTER tag"
+    },
+    {
+        'table': 'transactions',
+        'column': 'month_key',
+        'definition': 'VARCHAR(7) AFTER date'
+    },
+    {
+        'table': 'transactions',
+        'column': 'account_id',
+        'definition': 'VARCHAR(50)',
+        'modify': True
+    },
+    {
+        'table': 'transactions',
+        'column': 'transfer_to_account_id',
+        'definition': 'VARCHAR(50)',
+        'modify': True
+    },
+    {
+        'table': 'transactions',
+        'column': 'transfer_type',
+        'definition': "ENUM('internal', 'as_income', 'receive_income') DEFAULT NULL"
+    },
+    {
+        'table': 'transactions',
+        'column': 'is_debt_payment',
+        'definition': "BOOLEAN DEFAULT FALSE"
+    },
+    {
+        'table': 'transactions',
+        'column': 'original_debt_id',
+        'definition': 'INT'
+    }
+]
     
     # ✅ แก้ไข indent ให้ถูกต้อง
     for mig in migrations:
@@ -249,6 +255,7 @@ def init_database():
         "CREATE INDEX idx_transactions_tag ON transactions(user_id, tag)",
         "CREATE INDEX idx_transactions_type ON transactions(user_id, type)",
         "CREATE INDEX idx_transactions_account ON transactions(user_id, account_id)",
+        "CREATE INDEX idx_transactions_transfer_type ON transactions(transfer_type)",
         "CREATE INDEX idx_accounts_user ON accounts(user_id)",
         "CREATE INDEX idx_categories_user ON categories(user_id)",
         "CREATE INDEX idx_tags_user ON tags(user_id)",
@@ -297,23 +304,26 @@ def update_transaction(transaction_id, user_id, transaction_data):
             return False, "Transaction not found or unauthorized"
         
         cursor.execute('''
-            UPDATE transactions 
-            SET type = %s, amount = %s, description = %s, category = %s,
-                tag = %s, icon = %s, date = %s, month_key = %s, account_id = %s
-            WHERE id = %s AND user_id = %s
-        ''', (
-            transaction_data.get('type'),
-            transaction_data.get('amount'),
-            transaction_data.get('desc'),
-            transaction_data.get('category'),
-            transaction_data.get('tag'),
-            transaction_data.get('icon'),
-            transaction_data.get('date'),
-            transaction_data.get('month_key'),
-            transaction_data.get('account_id'),
-            transaction_id,
-            user_id
-        ))
+    UPDATE transactions 
+    SET type = %s, amount = %s, description = %s, category = %s,
+        tag = %s, icon = %s, date = %s, month_key = %s, 
+        account_id = %s, transfer_to_account_id = %s, transfer_type = %s
+    WHERE id = %s AND user_id = %s
+''', (
+    transaction_data.get('type'),
+    transaction_data.get('amount'),
+    transaction_data.get('desc'),
+    transaction_data.get('category'),
+    transaction_data.get('tag'),
+    transaction_data.get('icon'),
+    transaction_data.get('date'),
+    transaction_data.get('month_key'),
+    transaction_data.get('account_id'),
+    transaction_data.get('transfer_to_account_id'),
+    transaction_data.get('transfer_type'),
+    transaction_id,
+    user_id
+))
         
         conn.commit()
         affected_rows = cursor.rowcount
