@@ -22,7 +22,6 @@ def home():
 # ============================================
 
 def format_transaction_response(transaction):
-    """แปลง transaction จาก DB ให้ตรงกับ frontend"""
     return {
         'id': str(transaction['id']),
         'amount': float(transaction['amount']),
@@ -34,7 +33,9 @@ def format_transaction_response(transaction):
         'rawDate': transaction['date'].strftime('%Y-%m-%d') if hasattr(transaction['date'], 'strftime') else transaction['date'],
         'date': transaction['date'].strftime('%Y-%m-%d') if hasattr(transaction['date'], 'strftime') else transaction['date'],
         'monthKey': transaction['month_key'],
-        'accountId': transaction['account_id'],  # ✅ คืนค่าเป็น string ตามที่เก็บ
+        'accountId': transaction['account_id'],
+        'transferToAccountId': transaction['transfer_to_account_id'],  # ✅ เพิ่ม
+        'transferType': transaction['transfer_type'],  # ✅ เพิ่ม
         'createdAt': transaction['created_at'].isoformat() if transaction['created_at'] else None,
         'updatedAt': transaction['updated_at'].isoformat() if transaction['updated_at'] else None
     }
@@ -315,6 +316,8 @@ def get_transactions(user_id):
                     'date': date_str,
                     'monthKey': t['month_key'] or '',
                     'accountId': str(t['account_id']) if t['account_id'] else None,
+                    'transferToAccountId': str(t['transfer_to_account_id']) if t['transfer_to_account_id'] else None,
+                    'transferType': t['transfer_type'],
                     'createdAt': created_str,
                     'updatedAt': None
                 })
@@ -354,26 +357,30 @@ def add_transaction():
         
         if account_id is not None:
             account_id = str(account_id)
+
+        transfer_type = data.get('transferType')
         
         cursor.execute('''
-            INSERT INTO transactions 
-            (user_id, type, amount, description, category, tag, icon, date, month_key, account_id, transfer_to_account_id, is_debt_payment, original_debt_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ''', (
-            user_id,
-            data.get('type'),
-            data.get('amount'),
-            data.get('desc'),
-            data.get('category'),
-            data.get('tag', ''),
-            data.get('icon', '📝'),
-            data.get('rawDate') or data.get('date'),
-            data.get('month_key'),
-            account_id,  # ✅ ส่ง string ตรงๆ
-            data.get('transferToAccountId'),
-            data.get('isDebtPayment', False),
-            data.get('originalDebtId')
-        ))
+    INSERT INTO transactions 
+    (user_id, type, amount, description, category, tag, icon, date, month_key, 
+     account_id, transfer_to_account_id, transfer_type, is_debt_payment, original_debt_id)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+''', (
+    user_id,
+    data.get('type'),
+    data.get('amount'),
+    data.get('desc'),
+    data.get('category'),
+    data.get('tag', ''),
+    data.get('icon', '📝'),
+    data.get('rawDate') or data.get('date'),
+    data.get('month_key'),
+    account_id,
+    data.get('transferToAccountId'),
+    transfer_type,  # ✅ เพิ่มตรงนี้
+    data.get('isDebtPayment', False),
+    data.get('originalDebtId')
+))
         
         conn.commit()
         transaction_id = cursor.lastrowid
@@ -442,10 +449,18 @@ def update_transaction(transaction_id):
         if account_id is not None:
             account_id = str(account_id)
         
+
+        transfer_to_account_id = data.get('transfer_to_account_id')
+        if transfer_to_account_id is not None:
+            transfer_to_account_id = str(transfer_to_account_id)
+
+        transfer_type = data.get('transfer_type')
+
         cursor.execute('''
             UPDATE transactions 
             SET type = %s, amount = %s, description = %s, category = %s,
-                tag = %s, icon = %s, date = %s, month_key = %s, account_id = %s
+                tag = %s, icon = %s, date = %s, month_key = %s, 
+                account_id = %s, transfer_to_account_id = %s, transfer_type = %s
             WHERE id = %s AND user_id = %s
         ''', (
             data.get('type'), 
@@ -456,7 +471,9 @@ def update_transaction(transaction_id):
             data.get('icon'),
             data.get('date'), 
             data.get('month_key'),
-            account_id,  # ✅ ส่ง string ตรงๆ
+            account_id,
+            transfer_to_account_id,
+            transfer_type,
             transaction_id, 
             user_id
         ))
