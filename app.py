@@ -17,9 +17,7 @@ init_database()
 def home():
     return jsonify({"message": "Expense Tracker API is running"})
 
-# ============================================
-# HELPER FUNCTIONS
-# ============================================
+
 
 def format_transaction_response(transaction):
     return {
