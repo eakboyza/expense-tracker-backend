@@ -636,7 +636,7 @@ def update_account(account_id):
 
 @app.route('/api/accounts/<int:account_id>', methods=['DELETE'])
 def delete_account(account_id):
-    """ลบบัญชี"""
+    """ลบบัญชี พร้อม transactions ที่เกี่ยวข้องทั้งหมด"""
     try:
         user_id = request.args.get('user_id')
         
@@ -649,25 +649,29 @@ def delete_account(account_id):
             
         cursor = conn.cursor()
         
-        # ✅ เพิ่ม: ตรวจสอบว่าบัญชีนี้มีธุรกรรมหรือไม่
+        # ✅ นับจำนวน transaction ที่จะถูกลบ (เพื่อแสดงผล)
         cursor.execute('''
             SELECT COUNT(*) FROM transactions 
             WHERE (account_id = %s OR transfer_to_account_id = %s) 
             AND user_id = %s
         ''', (str(account_id), str(account_id), user_id))
         
-        count = cursor.fetchone()[0]
+        transaction_count = cursor.fetchone()[0]
         
-        if count > 0:
-            cursor.close()
-            conn.close()
-            return jsonify({
-                "error": f"ไม่สามารถลบบัญชีได้ เพราะมี {count} รายการที่เกี่ยวข้อง",
-                "has_transactions": True,
-                "transaction_count": count
-            }), 400
+        # ✅ ลบ transactions ที่เกี่ยวข้องทั้งหมด
+        cursor.execute('''
+            DELETE FROM transactions 
+            WHERE (account_id = %s OR transfer_to_account_id = %s) 
+            AND user_id = %s
+        ''', (str(account_id), str(account_id), user_id))
         
-        # ✅ ลบบัญชี (ถ้าไม่มีธุรกรรม)
+        # ✅ ลบ debt_payments ที่เกี่ยวข้อง (ถ้ามี)
+        cursor.execute('''
+            DELETE FROM debt_payments 
+            WHERE account_id = %s
+        ''', (str(account_id),))
+        
+        # ✅ ลบ account
         cursor.execute(
             "DELETE FROM accounts WHERE id = %s AND user_id = %s",
             (account_id, user_id)
@@ -679,12 +683,18 @@ def delete_account(account_id):
         conn.close()
         
         if affected_rows > 0:
-            return jsonify({"message": "Account deleted"}), 200
+            return jsonify({
+                "message": "Account and related transactions deleted",
+                "deleted_account": affected_rows,
+                "deleted_transactions": transaction_count
+            }), 200
         else:
             return jsonify({"error": "Account not found"}), 404
             
     except Exception as e:
         print(f"Error deleting account: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 # ============================================
