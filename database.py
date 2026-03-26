@@ -103,7 +103,8 @@ def init_database():
             month_key VARCHAR(7),
             account_id VARCHAR(50),
             transfer_to_account_id VARCHAR(50),
-            transfer_type ENUM('internal', 'as_income', 'receive_income') DEFAULT NULL,
+            transfer_from_account_id VARCHAR(50),
+            transfer_type ENUM('internal', 'as_income', 'receive_income', 'internal_receive') DEFAULT NULL,
             is_debt_payment BOOLEAN DEFAULT FALSE,
             original_debt_id INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -180,49 +181,55 @@ def init_database():
     print("🔧 Running database migrations...")
     
     migrations = [
-    {
-        'table': 'transactions',
-        'column': 'tag',
-        'definition': 'VARCHAR(50) AFTER category'
-    },
-    {
-        'table': 'transactions',
-        'column': 'icon',
-        'definition': "VARCHAR(10) DEFAULT '📝' AFTER tag"
-    },
-    {
-        'table': 'transactions',
-        'column': 'month_key',
-        'definition': 'VARCHAR(7) AFTER date'
-    },
-    {
-        'table': 'transactions',
-        'column': 'account_id',
-        'definition': 'VARCHAR(50)',
-        'modify': True
-    },
-    {
-        'table': 'transactions',
-        'column': 'transfer_to_account_id',
-        'definition': 'VARCHAR(50)',
-        'modify': True
-    },
-    {
-        'table': 'transactions',
-        'column': 'transfer_type',
-        'definition': "ENUM('internal', 'as_income', 'receive_income') DEFAULT NULL"
-    },
-    {
-        'table': 'transactions',
-        'column': 'is_debt_payment',
-        'definition': "BOOLEAN DEFAULT FALSE"
-    },
-    {
-        'table': 'transactions',
-        'column': 'original_debt_id',
-        'definition': 'INT'
-    }
-]
+        {
+            'table': 'transactions',
+            'column': 'tag',
+            'definition': 'VARCHAR(50) AFTER category'
+        },
+        {
+            'table': 'transactions',
+            'column': 'icon',
+            'definition': "VARCHAR(10) DEFAULT '📝' AFTER tag"
+        },
+        {
+            'table': 'transactions',
+            'column': 'month_key',
+            'definition': 'VARCHAR(7) AFTER date'
+        },
+        {
+            'table': 'transactions',
+            'column': 'account_id',
+            'definition': 'VARCHAR(50)',
+            'modify': True
+        },
+        {
+            'table': 'transactions',
+            'column': 'transfer_to_account_id',
+            'definition': 'VARCHAR(50)',
+            'modify': True
+        },
+        {
+            'table': 'transactions',
+            'column': 'transfer_from_account_id', 
+            'definition': 'VARCHAR(50) AFTER transfer_to_account_id'
+        },
+        {
+            'table': 'transactions',
+            'column': 'transfer_type',
+            'definition': "ENUM('internal', 'as_income', 'receive_income', 'internal_receive') DEFAULT NULL",
+            'modify': True
+        },
+        {
+            'table': 'transactions',
+            'column': 'is_debt_payment',
+            'definition': "BOOLEAN DEFAULT FALSE"
+        },
+        {
+            'table': 'transactions',
+            'column': 'original_debt_id',
+            'definition': 'INT'
+        }
+    ]
     
     # ✅ แก้ไข indent ให้ถูกต้อง
     for mig in migrations:
@@ -320,6 +327,7 @@ def update_transaction(transaction_id, user_id, transaction_data):
     transaction_data.get('month_key'),
     transaction_data.get('account_id'),
     transaction_data.get('transfer_to_account_id'),
+    transaction_data.get('transfer_from_account_id'),
     transaction_data.get('transfer_type'),
     transaction_id,
     user_id
