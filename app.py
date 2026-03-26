@@ -388,28 +388,33 @@ def add_transaction():
                 print(f"⚠️ Unknown transfer_type: {transfer_type}")
                 # ไม่ต้อง error แค่ log ไว้
         
-        # ✅ ใช้ parameterized query
+        transfer_from_account_id = data.get('transferFromAccountId')
+        if transfer_from_account_id is not None:
+            transfer_from_account_id = str(transfer_from_account_id)
+
         cursor.execute('''
             INSERT INTO transactions 
             (user_id, type, amount, description, category, tag, icon, date, month_key, 
-             account_id, transfer_to_account_id, transfer_type, is_debt_payment, original_debt_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        ''', (
-            user_id,
-            tx_type,
-            data.get('amount'),
-            data.get('desc'),
-            data.get('category'),
-            data.get('tag', ''),
-            data.get('icon', '📝'),
-            data.get('rawDate') or data.get('date'),
-            data.get('month_key'),
-            account_id,
-            transfer_to_account_id,
-            transfer_type,
-            data.get('isDebtPayment', False),
-            data.get('originalDebtId')
-        ))
+            account_id, transfer_to_account_id, transfer_from_account_id, transfer_type, 
+            is_debt_payment, original_debt_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (
+                user_id,
+                tx_type,
+                data.get('amount'),
+                data.get('desc'),
+                data.get('category'),
+                data.get('tag', ''),
+                data.get('icon', '📝'),
+                data.get('rawDate') or data.get('date'),
+                data.get('month_key'),
+                account_id,
+                transfer_to_account_id,
+                transfer_from_account_id,
+                transfer_type,
+                data.get('isDebtPayment', False),
+                data.get('originalDebtId')
+            ))
         
         conn.commit()
         transaction_id = cursor.lastrowid
