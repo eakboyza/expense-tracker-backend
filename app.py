@@ -351,39 +351,53 @@ def add_transaction():
             
         cursor = conn.cursor()
         
-        account_id = data.get('accountId')  
-        
+        # ✅ แปลง account_id เป็น string
+        account_id = data.get('accountId')
         if account_id is not None:
             account_id = str(account_id)
-
+        
+        # ✅ แปลง transfer_to_account_id เป็น string
+        transfer_to_account_id = data.get('transferToAccountId')
+        if transfer_to_account_id is not None:
+            transfer_to_account_id = str(transfer_to_account_id)
+        
+        # ✅ รับ transfer_type
         transfer_type = data.get('transferType')
         
+        # ✅ Debug log
+        print(f"📝 add_transaction - account_id: {account_id}")
+        print(f"📝 add_transaction - transfer_to_account_id: {transfer_to_account_id}")
+        print(f"📝 add_transaction - transfer_type: {transfer_type}")
+        print(f"📝 add_transaction - type: {data.get('type')}")
+        
         cursor.execute('''
-    INSERT INTO transactions 
-    (user_id, type, amount, description, category, tag, icon, date, month_key, 
-     account_id, transfer_to_account_id, transfer_type, is_debt_payment, original_debt_id)
-    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-''', (
-    user_id,
-    data.get('type'),
-    data.get('amount'),
-    data.get('desc'),
-    data.get('category'),
-    data.get('tag', ''),
-    data.get('icon', '📝'),
-    data.get('rawDate') or data.get('date'),
-    data.get('month_key'),
-    account_id,
-    data.get('transferToAccountId'),
-    transfer_type,  # ✅ เพิ่มตรงนี้
-    data.get('isDebtPayment', False),
-    data.get('originalDebtId')
-))
+            INSERT INTO transactions 
+            (user_id, type, amount, description, category, tag, icon, date, month_key, 
+             account_id, transfer_to_account_id, transfer_type, is_debt_payment, original_debt_id)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        ''', (
+            user_id,
+            data.get('type'),
+            data.get('amount'),
+            data.get('desc'),
+            data.get('category'),
+            data.get('tag', ''),
+            data.get('icon', '📝'),
+            data.get('rawDate') or data.get('date'),
+            data.get('month_key'),
+            account_id,
+            transfer_to_account_id,
+            transfer_type,
+            data.get('isDebtPayment', False),
+            data.get('originalDebtId')
+        ))
         
         conn.commit()
         transaction_id = cursor.lastrowid
         cursor.close()
         conn.close()
+        
+        print(f"✅ Transaction added: id={transaction_id}, transfer_to_account_id={transfer_to_account_id}, transfer_type={transfer_type}")
         
         return jsonify({
             "message": "Transaction added",
@@ -392,6 +406,8 @@ def add_transaction():
         
     except Exception as e:
         print(f"Error adding transaction: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/debug/transactions/<int:user_id>', methods=['GET'])
