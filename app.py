@@ -350,6 +350,9 @@ def add_transaction():
         # ✅ Debug: แสดงข้อมูลที่ได้รับทั้งหมด
         print("=" * 60)
         print("📥 Received transaction data:")
+        print(f"   transferFromAccountId: {data.get('transferFromAccountId')}")
+        print(f"   transferToAccountId: {data.get('transferToAccountId')}")
+        print(f"   transferType: {data.get('transferType')}")
         for key, value in data.items():
             print(f"   {key}: {value} (type: {type(value)})")
         print("=" * 60)
