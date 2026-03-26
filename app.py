@@ -345,6 +345,13 @@ def add_transaction():
         if not user_id:
             return jsonify({"error": "User ID required"}), 400
         
+        # ✅ Debug: แสดงข้อมูลที่ได้รับทั้งหมด
+        print("=" * 50)
+        print("📥 Received transaction data:")
+        for key, value in data.items():
+            print(f"   {key}: {value} (type: {type(value)})")
+        print("=" * 50)
+        
         conn = get_db_connection()
         if not conn:
             return jsonify({"error": "Database connection failed"}), 500
@@ -364,11 +371,15 @@ def add_transaction():
         # ✅ รับ transfer_type
         transfer_type = data.get('transferType')
         
-        # ✅ Debug log
-        print(f"📝 add_transaction - account_id: {account_id}")
-        print(f"📝 add_transaction - transfer_to_account_id: {transfer_to_account_id}")
-        print(f"📝 add_transaction - transfer_type: {transfer_type}")
-        print(f"📝 add_transaction - type: {data.get('type')}")
+        # ✅ ตรวจสอบ type ก่อน INSERT
+        tx_type = data.get('type')
+        print(f"🔍 type value: {tx_type}")
+        
+        # ✅ ตรวจสอบว่า type อยู่ใน ENUM หรือไม่
+        valid_types = ['income', 'expense', 'transfer']
+        if tx_type not in valid_types:
+            print(f"❌ Invalid type: {tx_type}. Must be one of {valid_types}")
+            return jsonify({"error": f"Invalid type: {tx_type}. Must be income, expense, or transfer"}), 400
         
         cursor.execute('''
             INSERT INTO transactions 
@@ -377,7 +388,7 @@ def add_transaction():
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (
             user_id,
-            data.get('type'),
+            tx_type,
             data.get('amount'),
             data.get('desc'),
             data.get('category'),
@@ -397,7 +408,7 @@ def add_transaction():
         cursor.close()
         conn.close()
         
-        print(f"✅ Transaction added: id={transaction_id}, transfer_to_account_id={transfer_to_account_id}, transfer_type={transfer_type}")
+        print(f"✅ Transaction added: id={transaction_id}")
         
         return jsonify({
             "message": "Transaction added",
@@ -405,7 +416,7 @@ def add_transaction():
         }), 201
         
     except Exception as e:
-        print(f"Error adding transaction: {e}")
+        print(f"❌ Error adding transaction: {e}")
         import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
