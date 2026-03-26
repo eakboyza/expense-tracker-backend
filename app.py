@@ -346,11 +346,11 @@ def add_transaction():
             return jsonify({"error": "User ID required"}), 400
         
         # ✅ Debug: แสดงข้อมูลที่ได้รับทั้งหมด
-        print("=" * 50)
+        print("=" * 60)
         print("📥 Received transaction data:")
         for key, value in data.items():
             print(f"   {key}: {value} (type: {type(value)})")
-        print("=" * 50)
+        print("=" * 60)
         
         conn = get_db_connection()
         if not conn:
@@ -373,14 +373,22 @@ def add_transaction():
         
         # ✅ ตรวจสอบ type ก่อน INSERT
         tx_type = data.get('type')
-        print(f"🔍 type value: {tx_type}")
+        print(f"🔍 tx_type: '{tx_type}' (type: {type(tx_type)})")
         
         # ✅ ตรวจสอบว่า type อยู่ใน ENUM หรือไม่
         valid_types = ['income', 'expense', 'transfer']
         if tx_type not in valid_types:
-            print(f"❌ Invalid type: {tx_type}. Must be one of {valid_types}")
+            print(f"❌ Invalid type: '{tx_type}'. Must be one of {valid_types}")
             return jsonify({"error": f"Invalid type: {tx_type}. Must be income, expense, or transfer"}), 400
         
+        # ✅ ตรวจสอบ transfer_type (optional)
+        if transfer_type:
+            valid_transfer_types = ['internal', 'as_income', 'receive_income']
+            if transfer_type not in valid_transfer_types:
+                print(f"⚠️ Unknown transfer_type: {transfer_type}")
+                # ไม่ต้อง error แค่ log ไว้
+        
+        # ✅ ใช้ parameterized query
         cursor.execute('''
             INSERT INTO transactions 
             (user_id, type, amount, description, category, tag, icon, date, month_key, 
