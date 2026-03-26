@@ -32,8 +32,9 @@ def format_transaction_response(transaction):
         'date': transaction['date'].strftime('%Y-%m-%d') if hasattr(transaction['date'], 'strftime') else transaction['date'],
         'monthKey': transaction['month_key'],
         'accountId': transaction['account_id'],
-        'transferToAccountId': transaction['transfer_to_account_id'],  # ✅ เพิ่ม
-        'transferType': transaction['transfer_type'],  # ✅ เพิ่ม
+        'transferToAccountId': transaction['transfer_to_account_id'],
+        'transferFromAccountId': transaction['transfer_from_account_id'],
+        'transferType': transaction['transfer_type'],
         'createdAt': transaction['created_at'].isoformat() if transaction['created_at'] else None,
         'updatedAt': transaction['updated_at'].isoformat() if transaction['updated_at'] else None
     }
@@ -315,6 +316,7 @@ def get_transactions(user_id):
                     'monthKey': t['month_key'] or '',
                     'accountId': str(t['account_id']) if t['account_id'] else None,
                     'transferToAccountId': str(t['transfer_to_account_id']) if t['transfer_to_account_id'] else None,
+                    'transferFromAccountId': str(t['transfer_from_account_id']) if t['transfer_from_account_id'] else None,
                     'transferType': t['transfer_type'],
                     'createdAt': created_str,
                     'updatedAt': None
@@ -388,6 +390,7 @@ def add_transaction():
                 print(f"⚠️ Unknown transfer_type: {transfer_type}")
                 # ไม่ต้อง error แค่ log ไว้
         
+        # รับ transfer_from_account_id
         transfer_from_account_id = data.get('transferFromAccountId')
         if transfer_from_account_id is not None:
             transfer_from_account_id = str(transfer_from_account_id)
@@ -398,23 +401,23 @@ def add_transaction():
             account_id, transfer_to_account_id, transfer_from_account_id, transfer_type, 
             is_debt_payment, original_debt_id)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (
-                user_id,
-                tx_type,
-                data.get('amount'),
-                data.get('desc'),
-                data.get('category'),
-                data.get('tag', ''),
-                data.get('icon', '📝'),
-                data.get('rawDate') or data.get('date'),
-                data.get('month_key'),
-                account_id,
-                transfer_to_account_id,
-                transfer_from_account_id,
-                transfer_type,
-                data.get('isDebtPayment', False),
-                data.get('originalDebtId')
-            ))
+        ''', (
+            user_id,
+            tx_type,
+            data.get('amount'),
+            data.get('desc'),
+            data.get('category'),
+            data.get('tag', ''),
+            data.get('icon', '📝'),
+            data.get('rawDate') or data.get('date'),
+            data.get('month_key'),
+            account_id,
+            transfer_to_account_id,
+            transfer_from_account_id,
+            transfer_type,
+            data.get('isDebtPayment', False),
+            data.get('originalDebtId')
+        ))
         
         conn.commit()
         transaction_id = cursor.lastrowid
