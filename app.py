@@ -296,6 +296,13 @@ def get_transactions(user_id):
         cursor.execute(query, params)
         transactions = cursor.fetchall()
         
+        # ✅ Debug: แสดงข้อมูลที่ดึงมา
+        print("=" * 60)
+        print(f"📥 Found {len(transactions)} transactions")
+        for t in transactions:
+            print(f"   id={t['id']}, type={t['type']}, account_id={t['account_id']}, transfer_type={t['transfer_type']}, transfer_from={t['transfer_from_account_id']}")
+        print("=" * 60)
+        
         result = []
         for t in transactions:
             try:
