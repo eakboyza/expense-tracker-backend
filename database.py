@@ -228,7 +228,13 @@ def init_database():
             'table': 'transactions',
             'column': 'original_debt_id',
             'definition': 'INT'
+        },
+        {
+            'table': 'transactions',  # ✅ เพิ่ม migration นี้
+            'column': 'is_initial_balance',
+            'definition': "BOOLEAN DEFAULT FALSE"
         }
+
     ]
     
     # ✅ แก้ไข indent ให้ถูกต้อง
