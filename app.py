@@ -681,12 +681,13 @@ def update_account(account_id):
         
         cursor.execute('''
             UPDATE accounts 
-            SET name = %s, type = %s, icon = %s, is_default = %s
+            SET name = %s, type = %s, icon = %s, initial_balance = %s, is_default = %s
             WHERE id = %s AND user_id = %s
         ''', (
             data.get('name'),
             data.get('type'),
             data.get('icon'),
+            data.get('initialBalance', 0),
             data.get('isDefault', False),
             account_id,
             user_id
