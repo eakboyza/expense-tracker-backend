@@ -322,8 +322,9 @@ def get_transactions(user_id):
                     'monthKey': t['month_key'] or '',
                     'accountId': str(t['account_id']) if t['account_id'] else None,
                     'transferToAccountId': str(t['transfer_to_account_id']) if t['transfer_to_account_id'] else None,
-                    'transferFromAccountId': str(t['transfer_from_account_id']) if t['transfer_from_account_id'] else None,  # ✅ เพิ่ม
-                    'transferType': t['transfer_type'],  # ✅ เพิ่ม
+                    'transferFromAccountId': str(t['transfer_from_account_id']) if t['transfer_from_account_id'] else None,
+                    'transferType': t['transfer_type'],
+                    'isInitialBalance': t.get('is_initial_balance', False),
                     'createdAt': created_str,
                     'updatedAt': None
                 })
