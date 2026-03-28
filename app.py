@@ -499,23 +499,31 @@ def update_transaction(transaction_id):
         if not cursor.fetchone():
             return jsonify({"error": "Transaction not found or unauthorized"}), 404
         
-        # ✅ แปลง account_id เป็น string ถ้ามี
+        # แปลง account_id เป็น string ถ้ามี
         account_id = data.get('account_id')
         if account_id is not None:
             account_id = str(account_id)
         
-
         transfer_to_account_id = data.get('transfer_to_account_id')
         if transfer_to_account_id is not None:
             transfer_to_account_id = str(transfer_to_account_id)
-
+        
+        transfer_from_account_id = data.get('transfer_from_account_id')
+        if transfer_from_account_id is not None:
+            transfer_from_account_id = str(transfer_from_account_id)
+        
         transfer_type = data.get('transfer_type')
-
+        
+        # ✅ รับ is_initial_balance
+        is_initial_balance = data.get('is_initial_balance', False)
+        
         cursor.execute('''
             UPDATE transactions 
             SET type = %s, amount = %s, description = %s, category = %s,
                 tag = %s, icon = %s, date = %s, month_key = %s, 
-                account_id = %s, transfer_to_account_id = %s, transfer_type = %s
+                account_id = %s, transfer_to_account_id = %s, 
+                transfer_from_account_id = %s, transfer_type = %s,
+                is_initial_balance = %s
             WHERE id = %s AND user_id = %s
         ''', (
             data.get('type'), 
@@ -528,7 +536,9 @@ def update_transaction(transaction_id):
             data.get('month_key'),
             account_id,
             transfer_to_account_id,
+            transfer_from_account_id,
             transfer_type,
+            is_initial_balance,  # ✅ เพิ่ม
             transaction_id, 
             user_id
         ))
