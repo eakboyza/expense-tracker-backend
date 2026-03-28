@@ -317,27 +317,30 @@ def update_transaction(transaction_id, user_id, transaction_data):
             return False, "Transaction not found or unauthorized"
         
         cursor.execute('''
-    UPDATE transactions 
-    SET type = %s, amount = %s, description = %s, category = %s,
-        tag = %s, icon = %s, date = %s, month_key = %s, 
-        account_id = %s, transfer_to_account_id = %s, transfer_type = %s
-    WHERE id = %s AND user_id = %s
-''', (
-    transaction_data.get('type'),
-    transaction_data.get('amount'),
-    transaction_data.get('desc'),
-    transaction_data.get('category'),
-    transaction_data.get('tag'),
-    transaction_data.get('icon'),
-    transaction_data.get('date'),
-    transaction_data.get('month_key'),
-    transaction_data.get('account_id'),
-    transaction_data.get('transfer_to_account_id'),
-    transaction_data.get('transfer_from_account_id'),
-    transaction_data.get('transfer_type'),
-    transaction_id,
-    user_id
-))
+            UPDATE transactions 
+            SET type = %s, amount = %s, description = %s, category = %s,
+                tag = %s, icon = %s, date = %s, month_key = %s, 
+                account_id = %s, transfer_to_account_id = %s, 
+                transfer_from_account_id = %s, transfer_type = %s,
+                is_initial_balance = %s
+            WHERE id = %s AND user_id = %s
+        ''', (
+            transaction_data.get('type'),
+            transaction_data.get('amount'),
+            transaction_data.get('desc'),
+            transaction_data.get('category'),
+            transaction_data.get('tag'),
+            transaction_data.get('icon'),
+            transaction_data.get('date'),
+            transaction_data.get('month_key'),
+            transaction_data.get('account_id'),
+            transaction_data.get('transfer_to_account_id'),
+            transaction_data.get('transfer_from_account_id'),
+            transaction_data.get('transfer_type'),
+            transaction_data.get('is_initial_balance', False),  # ✅ เพิ่ม
+            transaction_id,
+            user_id
+        ))
         
         conn.commit()
         affected_rows = cursor.rowcount
