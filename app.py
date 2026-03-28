@@ -360,6 +360,7 @@ def add_transaction():
         print(f"   transferFromAccountId: {data.get('transferFromAccountId')}")
         print(f"   transferToAccountId: {data.get('transferToAccountId')}")
         print(f"   transferType: {data.get('transferType')}")
+        print(f"   isInitialBalance: {data.get('isInitialBalance')}")  # ✅ เพิ่ม
         for key, value in data.items():
             print(f"   {key}: {value} (type: {type(value)})")
         print("=" * 60)
@@ -395,22 +396,24 @@ def add_transaction():
         
         # ✅ ตรวจสอบ transfer_type (optional)
         if transfer_type:
-            valid_transfer_types = ['internal', 'as_income', 'receive_income']
+            valid_transfer_types = ['internal', 'as_income', 'receive_income', 'internal_receive']
             if transfer_type not in valid_transfer_types:
                 print(f"⚠️ Unknown transfer_type: {transfer_type}")
-                # ไม่ต้อง error แค่ log ไว้
         
         # รับ transfer_from_account_id
         transfer_from_account_id = data.get('transferFromAccountId')
         if transfer_from_account_id is not None:
             transfer_from_account_id = str(transfer_from_account_id)
+        
+        # ✅ รับ is_initial_balance
+        is_initial_balance = data.get('isInitialBalance', False)
 
         cursor.execute('''
             INSERT INTO transactions 
             (user_id, type, amount, description, category, tag, icon, date, month_key, 
             account_id, transfer_to_account_id, transfer_from_account_id, transfer_type, 
-            is_debt_payment, original_debt_id)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            is_debt_payment, original_debt_id, is_initial_balance)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (
             user_id,
             tx_type,
@@ -426,7 +429,8 @@ def add_transaction():
             transfer_from_account_id,
             transfer_type,
             data.get('isDebtPayment', False),
-            data.get('originalDebtId')
+            data.get('originalDebtId'),
+            is_initial_balance  # ✅ เพิ่ม
         ))
         
         conn.commit()
@@ -434,7 +438,7 @@ def add_transaction():
         cursor.close()
         conn.close()
         
-        print(f"✅ Transaction added: id={transaction_id}")
+        print(f"✅ Transaction added: id={transaction_id}, is_initial_balance={is_initial_balance}")
         
         return jsonify({
             "message": "Transaction added",
