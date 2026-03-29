@@ -699,7 +699,8 @@ def update_account(account_id):
         
         cursor.execute('''
             UPDATE accounts 
-            SET name = %s, type = %s, icon = %s, initial_balance = %s, is_default = %s
+            SET name = %s, type = %s, icon = %s, initial_balance = %s, is_default = %s,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND user_id = %s
         ''', (
             data.get('name'),
