@@ -689,14 +689,22 @@ def update_account(account_id):
             
         cursor = conn.cursor()
         
+        # ตรวจสอบว่า account นี้เป็นของผู้ใช้นี้หรือไม่
+        cursor.execute(
+            "SELECT id FROM accounts WHERE id = %s AND user_id = %s",
+            (account_id, user_id)
+        )
+        if not cursor.fetchone():
+            return jsonify({"error": "Account not found"}), 404
+        
         cursor.execute('''
             UPDATE accounts 
             SET name = %s, type = %s, icon = %s, initial_balance = %s, is_default = %s
             WHERE id = %s AND user_id = %s
         ''', (
             data.get('name'),
-            data.get('type'),
-            data.get('icon'),
+            data.get('type', 'savings'),
+            data.get('icon', '🏦'),
             data.get('initialBalance', 0),
             data.get('isDefault', False),
             account_id,
