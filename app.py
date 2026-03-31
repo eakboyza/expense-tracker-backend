@@ -8,7 +8,7 @@ from datetime import datetime
 import mysql.connector
 
 app = Flask(__name__)
-CORS(app)  # ให้ Frontend เรียก API ได้
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # เรียกตอนเริ่มระบบ
 init_database()
