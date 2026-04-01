@@ -1432,6 +1432,38 @@ def get_debt_payments(debt_id):
         print(f"Error getting debt payments: {e}")
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/debt-payments', methods=['GET'])
+def get_debt_payments():
+    """โหลดประวัติการชำระหนี้ทั้งหมดของผู้ใช้"""
+    try:
+        user_id = request.args.get('user_id')
+        if not user_id:
+            return jsonify({"error": "User ID required"}), 400
+        
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+            
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute('''
+            SELECT p.*, a.name as account_name, a.icon as account_icon
+            FROM debt_payments p
+            LEFT JOIN accounts a ON p.account_id = a.id
+            WHERE p.user_id = %s
+            ORDER BY p.payment_date DESC, p.created_at DESC
+        ''', (user_id,))
+        
+        payments = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        return jsonify(payments), 200
+        
+    except Exception as e:
+        print(f"Error getting debt payments: {e}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/debt-payments', methods=['POST'])
 def add_debt_payment():
     """บันทึกการชำระหนี้"""
@@ -1448,11 +1480,13 @@ def add_debt_payment():
             
         cursor = conn.cursor()
         
+        # ✅ เพิ่ม user_id ใน INSERT
         cursor.execute('''
             INSERT INTO debt_payments 
-            (debt_id, account_id, amount, payment_date, note)
-            VALUES (%s, %s, %s, %s, %s)
+            (user_id, debt_id, account_id, amount, payment_date, note)
+            VALUES (%s, %s, %s, %s, %s, %s)
         ''', (
+            user_id,
             data.get('debtId'),
             data.get('accountId'),
             data.get('amount'),
