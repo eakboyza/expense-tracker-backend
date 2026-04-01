@@ -1386,8 +1386,8 @@ def delete_debt(debt_id):
 # ============================================
 
 @app.route('/api/debts/<int:debt_id>/payments', methods=['GET'])
-def get_debt_payments(debt_id):
-    """โหลดประวัติการชำระหนี้"""
+def get_debt_payments_by_debt(debt_id):
+    """โหลดประวัติการชำระหนี้ของหนี้เดียว"""
     try:
         user_id = request.args.get('user_id')
         
@@ -1404,9 +1404,9 @@ def get_debt_payments(debt_id):
             SELECT p.*, a.name as account_name, a.icon as account_icon
             FROM debt_payments p
             LEFT JOIN accounts a ON p.account_id = a.id
-            WHERE p.debt_id = %s
+            WHERE p.debt_id = %s AND p.user_id = %s
             ORDER BY p.payment_date DESC, p.created_at DESC
-        ''', (debt_id,))
+        ''', (debt_id, user_id))
         
         payments = cursor.fetchall()
         cursor.close()
@@ -1432,8 +1432,10 @@ def get_debt_payments(debt_id):
         print(f"Error getting debt payments: {e}")
         return jsonify({"error": str(e)}), 500
 
+
+# ✅ อันที่สอง: เปลี่ยนชื่อฟังก์ชัน
 @app.route('/api/debt-payments', methods=['GET'])
-def get_debt_payments():
+def get_all_debt_payments():
     """โหลดประวัติการชำระหนี้ทั้งหมดของผู้ใช้"""
     try:
         user_id = request.args.get('user_id')
