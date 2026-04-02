@@ -230,6 +230,11 @@ def init_database():
             'definition': 'INT'
         },
         {
+        'table': 'transactions',
+        'column': 'original_payment_id',
+        'definition': 'VARCHAR(50) AFTER original_debt_id'
+        },
+        {
             'table': 'transactions',  # ✅ เพิ่ม migration นี้
             'column': 'is_initial_balance',
             'definition': "BOOLEAN DEFAULT FALSE"
