@@ -1456,46 +1456,27 @@ def get_all_debt_payments():
 
 @app.route('/api/debt-payments', methods=['POST'])
 def add_debt_payment():
-    """บันทึกการชำระหนี้"""
     try:
         data = request.json
         user_id = data.get('user_id')
         
-        if not user_id or not data.get('debtId') or not data.get('amount'):
-            return jsonify({"error": "Missing required fields"}), 400
-        
-        conn = get_db_connection()
-        if not conn:
-            return jsonify({"error": "Database connection failed"}), 500
-            
-        cursor = conn.cursor()
-        
-        # ✅ เพิ่ม user_id ใน INSERT
+        # บันทึก payment
         cursor.execute('''
-            INSERT INTO debt_payments 
-            (user_id, debt_id, account_id, amount, payment_date, note)
+            INSERT INTO debt_payments (user_id, debt_id, account_id, amount, payment_date, note)
             VALUES (%s, %s, %s, %s, %s, %s)
-        ''', (
-            user_id,
-            data.get('debtId'),
-            data.get('accountId'),
-            data.get('amount'),
-            data.get('payment_date'),
-            data.get('note')
-        ))
+        ''', (user_id, data.get('debtId'), data.get('accountId'), 
+              data.get('amount'), data.get('payment_date'), data.get('note')))
         
-        conn.commit()
         payment_id = cursor.lastrowid
-        cursor.close()
-        conn.close()
+        conn.commit()
         
+        # ✅ ส่ง ID จริงกลับไป
         return jsonify({
             "message": "Payment added",
-            "id": payment_id
+            "id": payment_id  # เช่น 40
         }), 201
         
     except Exception as e:
-        print(f"Error adding payment: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/debt-payments/<int:payment_id>', methods=['PUT'])
