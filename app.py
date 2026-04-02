@@ -325,6 +325,9 @@ def get_transactions(user_id):
                     'transferFromAccountId': str(t['transfer_from_account_id']) if t['transfer_from_account_id'] else None,
                     'transferType': t['transfer_type'],
                     'isInitialBalance': t.get('is_initial_balance', False),
+                    'isDebtPayment': t.get('is_debt_payment', False),     
+                    'originalDebtId': t.get('original_debt_id'),          
+                    'originalPaymentId': t.get('original_payment_id'),       
                     'createdAt': created_str,
                     'updatedAt': None
                 })
@@ -408,12 +411,14 @@ def add_transaction():
         # ✅ รับ is_initial_balance
         is_initial_balance = data.get('isInitialBalance', False)
 
+        original_payment_id = data.get('originalPaymentId')
+        
         cursor.execute('''
             INSERT INTO transactions 
             (user_id, type, amount, description, category, tag, icon, date, month_key, 
-            account_id, transfer_to_account_id, transfer_from_account_id, transfer_type, 
-            is_debt_payment, original_debt_id, is_initial_balance)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+             account_id, transfer_to_account_id, transfer_from_account_id, transfer_type, 
+             is_debt_payment, original_debt_id, original_payment_id, is_initial_balance)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         ''', (
             user_id,
             tx_type,
@@ -430,7 +435,8 @@ def add_transaction():
             transfer_type,
             data.get('isDebtPayment', False),
             data.get('originalDebtId'),
-            is_initial_balance  # ✅ เพิ่ม
+            original_payment_id,  # ✅ เพิ่ม
+            is_initial_balance
         ))
         
         conn.commit()
@@ -517,13 +523,16 @@ def update_transaction(transaction_id):
         # ✅ รับ is_initial_balance
         is_initial_balance = data.get('is_initial_balance', False)
         
+        original_payment_id = data.get('original_payment_id')
+        
         cursor.execute('''
             UPDATE transactions 
             SET type = %s, amount = %s, description = %s, category = %s,
                 tag = %s, icon = %s, date = %s, month_key = %s, 
                 account_id = %s, transfer_to_account_id = %s, 
                 transfer_from_account_id = %s, transfer_type = %s,
-                is_initial_balance = %s
+                is_debt_payment = %s, original_debt_id = %s,
+                original_payment_id = %s, is_initial_balance = %s
             WHERE id = %s AND user_id = %s
         ''', (
             data.get('type'), 
@@ -538,7 +547,10 @@ def update_transaction(transaction_id):
             transfer_to_account_id,
             transfer_from_account_id,
             transfer_type,
-            is_initial_balance,  # ✅ เพิ่ม
+            data.get('isDebtPayment', False),
+            data.get('original_debt_id'),
+            original_payment_id,
+            is_initial_balance,
             transaction_id, 
             user_id
         ))
