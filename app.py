@@ -1456,27 +1456,54 @@ def get_all_debt_payments():
 
 @app.route('/api/debt-payments', methods=['POST'])
 def add_debt_payment():
+    """บันทึกการชำระหนี้"""
     try:
         data = request.json
         user_id = data.get('user_id')
         
-        # บันทึก payment
+        if not user_id:
+            return jsonify({"error": "User ID required"}), 400
+        
+        if not data.get('debtId') or not data.get('amount'):
+            return jsonify({"error": "Missing required fields"}), 400
+        
+        # ✅ สร้าง connection และ cursor
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({"error": "Database connection failed"}), 500
+        
+        cursor = conn.cursor()  # ✅ สำคัญมาก!
+        
+        # ✅ บันทึก debt_payment
         cursor.execute('''
-            INSERT INTO debt_payments (user_id, debt_id, account_id, amount, payment_date, note)
+            INSERT INTO debt_payments 
+            (user_id, debt_id, account_id, amount, payment_date, note)
             VALUES (%s, %s, %s, %s, %s, %s)
-        ''', (user_id, data.get('debtId'), data.get('accountId'), 
-              data.get('amount'), data.get('payment_date'), data.get('note')))
+        ''', (
+            user_id,
+            data.get('debtId'),
+            data.get('accountId'),
+            data.get('amount'),
+            data.get('payment_date'),
+            data.get('note', '')
+        ))
         
-        payment_id = cursor.lastrowid
         conn.commit()
+        payment_id = cursor.lastrowid
+        cursor.close()
+        conn.close()
         
-        # ✅ ส่ง ID จริงกลับไป
+        print(f"✅ Payment saved: id={payment_id}, user_id={user_id}, amount={data.get('amount')}")
+        
         return jsonify({
             "message": "Payment added",
-            "id": payment_id  # เช่น 40
+            "id": payment_id
         }), 201
         
     except Exception as e:
+        print(f"❌ Error adding payment: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/debt-payments/<int:payment_id>', methods=['PUT'])
