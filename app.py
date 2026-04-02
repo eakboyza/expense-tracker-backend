@@ -490,11 +490,12 @@ def update_transaction(transaction_id):
             transfer_from_account_id = str(transfer_from_account_id)
         
         transfer_type = data.get('transfer_type')
-        
-        # ✅ รับ is_initial_balance
         is_initial_balance = data.get('is_initial_balance', False)
-        
         original_payment_id = data.get('original_payment_id')
+        original_debt_id = data.get('original_debt_id')
+        is_debt_payment = data.get('is_debt_payment', False)  # ✅ สำคัญ!
+        
+        print(f"🔍 Updating transaction {transaction_id}: is_debt_payment={is_debt_payment}, original_payment_id={original_payment_id}")
         
         cursor.execute('''
             UPDATE transactions 
@@ -518,8 +519,8 @@ def update_transaction(transaction_id):
             transfer_to_account_id,
             transfer_from_account_id,
             transfer_type,
-            data.get('isDebtPayment', False),
-            data.get('original_debt_id'),
+            is_debt_payment,           # ✅ สำคัญ!
+            original_debt_id,
             original_payment_id,
             is_initial_balance,
             transaction_id, 
