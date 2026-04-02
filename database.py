@@ -230,9 +230,14 @@ def init_database():
             'definition': 'INT'
         },
         {
-        'table': 'transactions',
-        'column': 'original_payment_id',
-        'definition': 'VARCHAR(50) AFTER original_debt_id'
+            'table': 'transactions',
+            'column': 'original_payment_id',
+            'definition': 'VARCHAR(50) AFTER original_debt_id'
+        },
+        {
+            'table': 'debt_payments',
+            'column': 'user_id',
+            'definition': 'INT AFTER id'
         },
         {
             'table': 'transactions',  # ✅ เพิ่ม migration นี้
