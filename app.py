@@ -357,19 +357,10 @@ def add_transaction():
         if not user_id:
             return jsonify({"error": "User ID required"}), 400
         
-        # ✅ Debug: แสดงข้อมูลที่ได้รับทั้งหมด
-        print("=" * 60)
-        print("📥 Received transaction data:")
-        print(f"   transferFromAccountId: {data.get('transferFromAccountId')}")
-        print(f"   transferToAccountId: {data.get('transferToAccountId')}")
-        print(f"   transferType: {data.get('transferType')}")
-        print(f"   isInitialBalance: {data.get('isInitialBalance')}")  # ✅ เพิ่ม
+        # ✅ Debug
         print("=" * 60)
         print("📥 Received transaction data:")
         print(f"   originalPaymentId: {data.get('originalPaymentId')}")
-        print("=" * 60)
-        for key, value in data.items():
-            print(f"   {key}: {value} (type: {type(value)})")
         print("=" * 60)
         
         conn = get_db_connection()
@@ -378,44 +369,24 @@ def add_transaction():
             
         cursor = conn.cursor()
         
-        # ✅ แปลง account_id เป็น string
+        # แปลง account_id เป็น string
         account_id = data.get('accountId')
         if account_id is not None:
             account_id = str(account_id)
         
-        # ✅ แปลง transfer_to_account_id เป็น string
         transfer_to_account_id = data.get('transferToAccountId')
         if transfer_to_account_id is not None:
             transfer_to_account_id = str(transfer_to_account_id)
         
-        # ✅ รับ transfer_type
-        transfer_type = data.get('transferType')
-        
-        # ✅ ตรวจสอบ type ก่อน INSERT
-        tx_type = data.get('type')
-        print(f"🔍 tx_type: '{tx_type}' (type: {type(tx_type)})")
-        
-        # ✅ ตรวจสอบว่า type อยู่ใน ENUM หรือไม่
-        valid_types = ['income', 'expense', 'transfer']
-        if tx_type not in valid_types:
-            print(f"❌ Invalid type: '{tx_type}'. Must be one of {valid_types}")
-            return jsonify({"error": f"Invalid type: {tx_type}. Must be income, expense, or transfer"}), 400
-        
-        # ✅ ตรวจสอบ transfer_type (optional)
-        if transfer_type:
-            valid_transfer_types = ['internal', 'as_income', 'receive_income', 'internal_receive']
-            if transfer_type not in valid_transfer_types:
-                print(f"⚠️ Unknown transfer_type: {transfer_type}")
-        
-        # รับ transfer_from_account_id
         transfer_from_account_id = data.get('transferFromAccountId')
         if transfer_from_account_id is not None:
             transfer_from_account_id = str(transfer_from_account_id)
         
-        # ✅ รับ is_initial_balance
-        is_initial_balance = data.get('isInitialBalance', False)
-
-        original_payment_id = data.get('originalPaymentId')
+        transfer_type = data.get('transferType')
+        tx_type = data.get('type')
+        
+        # ✅ รับค่า original_payment_id
+        original_payment_id = data.get('originalPaymentId')  # เปลี่ยนเป็น originalPaymentId
         
         cursor.execute('''
             INSERT INTO transactions 
@@ -439,8 +410,8 @@ def add_transaction():
             transfer_type,
             data.get('isDebtPayment', False),
             data.get('originalDebtId'),
-            original_payment_id,  # ✅ เพิ่ม
-            is_initial_balance
+            original_payment_id,  # ✅ สำคัญที่สุด!
+            data.get('isInitialBalance', False)
         ))
         
         conn.commit()
@@ -448,12 +419,12 @@ def add_transaction():
         cursor.close()
         conn.close()
         
-        print(f"✅ Transaction added: id={transaction_id}, is_initial_balance={is_initial_balance}")
+        print(f"✅ Transaction added: id={transaction_id}, original_payment_id={original_payment_id}")
         
         return jsonify({
             "message": "Transaction added",
             "id": transaction_id,
-            "original_payment_id": original_payment_id
+            "original_payment_id": original_payment_id  # ✅ ส่งกลับไปด้วย
         }), 201
         
     except Exception as e:
