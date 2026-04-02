@@ -364,6 +364,10 @@ def add_transaction():
         print(f"   transferToAccountId: {data.get('transferToAccountId')}")
         print(f"   transferType: {data.get('transferType')}")
         print(f"   isInitialBalance: {data.get('isInitialBalance')}")  # ✅ เพิ่ม
+        print("=" * 60)
+        print("📥 Received transaction data:")
+        print(f"   originalPaymentId: {data.get('originalPaymentId')}")
+        print("=" * 60)
         for key, value in data.items():
             print(f"   {key}: {value} (type: {type(value)})")
         print("=" * 60)
@@ -448,7 +452,8 @@ def add_transaction():
         
         return jsonify({
             "message": "Transaction added",
-            "id": transaction_id
+            "id": transaction_id,
+            "original_payment_id": original_payment_id
         }), 201
         
     except Exception as e:
