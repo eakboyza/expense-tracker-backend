@@ -1518,6 +1518,14 @@ def update_debt_payment(payment_id):
             
         cursor = conn.cursor()
         
+        # ✅ ตรวจสอบว่า payment นี้เป็นของผู้ใช้คนนี้หรือไม่
+        cursor.execute(
+            "SELECT id FROM debt_payments WHERE id = %s AND user_id = %s",
+            (payment_id, user_id)
+        )
+        if not cursor.fetchone():
+            return jsonify({"error": "Payment not found"}), 404
+        
         cursor.execute('''
             UPDATE debt_payments 
             SET account_id = %s, amount = %s, payment_date = %s, note = %s
@@ -1526,7 +1534,7 @@ def update_debt_payment(payment_id):
             data.get('accountId'),
             data.get('amount'),
             data.get('payment_date'),
-            data.get('note'),
+            data.get('note', ''),
             payment_id
         ))
         
@@ -1536,7 +1544,7 @@ def update_debt_payment(payment_id):
         conn.close()
         
         if affected_rows > 0:
-            return jsonify({"message": "Payment updated"}), 200
+            return jsonify({"message": "Payment updated successfully"}), 200
         else:
             return jsonify({"error": "Payment not found"}), 404
             
