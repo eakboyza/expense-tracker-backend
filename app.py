@@ -296,13 +296,6 @@ def get_transactions(user_id):
         cursor.execute(query, params)
         transactions = cursor.fetchall()
         
-        # ✅ Debug: แสดงข้อมูลที่ดึงมา
-        print("=" * 60)
-        print(f"📥 Found {len(transactions)} transactions")
-        for t in transactions:
-            print(f"   id={t['id']}, type={t['type']}, account_id={t['account_id']}, transfer_type={t['transfer_type']}, transfer_from={t['transfer_from_account_id']}")
-        print("=" * 60)
-        
         result = []
         for t in transactions:
             try:
@@ -325,9 +318,9 @@ def get_transactions(user_id):
                     'transferFromAccountId': str(t['transfer_from_account_id']) if t['transfer_from_account_id'] else None,
                     'transferType': t['transfer_type'],
                     'isInitialBalance': t.get('is_initial_balance', False),
-                    'isDebtPayment': t.get('is_debt_payment', False),     
-                    'originalDebtId': t.get('original_debt_id'),          
-                    'originalPaymentId': t.get('original_payment_id'),       
+                    'isDebtPayment': t.get('is_debt_payment', False),      # ✅ มีอยู่แล้ว
+                    'originalDebtId': t.get('original_debt_id'),           # ✅ มีอยู่แล้ว
+                    'originalPaymentId': t.get('original_payment_id'),     # ✅ มีอยู่แล้ว
                     'createdAt': created_str,
                     'updatedAt': None
                 })
@@ -339,6 +332,8 @@ def get_transactions(user_id):
         conn.close()
         
         print(f"✅ ส่งข้อมูล {len(result)} รายการกลับไป")
+        print(f"🔍 Sample transaction: {result[0] if result else 'None'}")  # ✅ เพิ่ม debug
+        
         return jsonify(result), 200
         
     except Exception as e:
