@@ -1519,29 +1519,19 @@ def update_debt_payment(payment_id):
         cursor = conn.cursor()
         
         # ✅ ตรวจสอบว่า payment นี้เป็นของผู้ใช้คนนี้หรือไม่
-        cursor.execute('''
-            SELECT dp.id FROM debt_payments dp
-            JOIN debts d ON dp.debt_id = d.id
-            WHERE dp.id = %s AND d.user_id = %s
-        ''', (payment_id, user_id))
-        
+        cursor.execute(
+            "SELECT id FROM debt_payments WHERE id = %s AND user_id = %s",
+            (payment_id, user_id)
+        )
         if not cursor.fetchone():
             return jsonify({"error": "Payment not found"}), 404
-        
-        # ✅ แปลง account_id ให้เป็น integer หรือ NULL
-        account_id = data.get('accountId')
-        if account_id:
-            try:
-                account_id = int(account_id)
-            except (ValueError, TypeError):
-                account_id = None
         
         cursor.execute('''
             UPDATE debt_payments 
             SET account_id = %s, amount = %s, payment_date = %s, note = %s
             WHERE id = %s
         ''', (
-            account_id,
+            data.get('accountId'),
             data.get('amount'),
             data.get('payment_date'),
             data.get('note', ''),
