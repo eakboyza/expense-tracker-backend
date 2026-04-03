@@ -1503,6 +1503,7 @@ def add_debt_payment():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/debt-payments/<int:payment_id>', methods=['PUT'])
+@app.route('/api/debt-payments/<payment_id>', methods=['PUT'])
 def update_debt_payment(payment_id):
     """แก้ไขการชำระหนี้"""
     try:
@@ -1511,6 +1512,12 @@ def update_debt_payment(payment_id):
         
         if not user_id:
             return jsonify({"error": "User ID required"}), 400
+        
+        # ✅ แปลง payment_id เป็น int (เผื่อส่งมาเป็น string)
+        try:
+            payment_id_int = int(payment_id)
+        except (ValueError, TypeError):
+            return jsonify({"error": f"Invalid payment_id: {payment_id}"}), 400
         
         conn = get_db_connection()
         if not conn:
@@ -1523,7 +1530,7 @@ def update_debt_payment(payment_id):
             SELECT dp.id FROM debt_payments dp
             JOIN debts d ON dp.debt_id = d.id
             WHERE dp.id = %s AND d.user_id = %s
-        ''', (payment_id, user_id))
+        ''', (payment_id_int, user_id))
         
         if not cursor.fetchone():
             return jsonify({"error": "Payment not found"}), 404
@@ -1545,7 +1552,7 @@ def update_debt_payment(payment_id):
             data.get('amount'),
             data.get('payment_date'),
             data.get('note', ''),
-            payment_id
+            payment_id_int
         ))
         
         conn.commit()
@@ -1560,6 +1567,8 @@ def update_debt_payment(payment_id):
             
     except Exception as e:
         print(f"Error updating payment: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
         
