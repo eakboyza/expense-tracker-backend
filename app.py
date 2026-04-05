@@ -681,7 +681,16 @@ def update_account(account_id):
         if not cursor.fetchone():
             return jsonify({"error": "Account not found"}), 404
         
-        # ✅ รองรับ manual_adjustment และ last_adjustment
+        # ✅ รับค่า manual_adjustment และ last_adjustment (จัดการ None)
+        manual_adjustment = data.get('manualAdjustment')
+        if manual_adjustment is None:
+            manual_adjustment = 0
+            
+        last_adjustment = data.get('lastAdjustment')
+        # ✅ ถ้าเป็นค่าว่าง หรือ None ให้ใช้ NULL ใน SQL
+        if last_adjustment is None or last_adjustment == '':
+            last_adjustment = None
+        
         cursor.execute('''
             UPDATE accounts 
             SET name = %s, type = %s, icon = %s, 
@@ -694,8 +703,8 @@ def update_account(account_id):
             data.get('type', 'savings'),
             data.get('icon', '🏦'),
             data.get('initialBalance', 0),
-            data.get('manualAdjustment', 0),      # ✅ เพิ่ม
-            data.get('lastAdjustment'),            # ✅ เพิ่ม
+            manual_adjustment,
+            last_adjustment,
             data.get('isDefault', False),
             account_id,
             user_id
@@ -713,6 +722,8 @@ def update_account(account_id):
             
     except Exception as e:
         print(f"Error updating account: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/accounts/<int:account_id>', methods=['DELETE'])
