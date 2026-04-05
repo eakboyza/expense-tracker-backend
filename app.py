@@ -602,12 +602,15 @@ def get_accounts(user_id):
                 'name': acc['name'],
                 'type': acc['type'],
                 'icon': acc['icon'],
-                'initialBalance': float(acc['initial_balance']),
+                'initialBalance': float(acc['initial_balance']) if acc['initial_balance'] else 0,
+                'manualAdjustment': float(acc['manual_adjustment']) if acc['manual_adjustment'] else 0,  # ✅ เพิ่ม
+                'lastAdjustment': acc['last_adjustment'].isoformat() if acc['last_adjustment'] else None,  # ✅ เพิ่ม
                 'isDefault': bool(acc['is_default']),
                 'createdAt': acc['created_at'].isoformat() if acc['created_at'] else None,
                 'updatedAt': acc['updated_at'].isoformat() if acc['updated_at'] else None
             })
         
+        print(f"📤 Sending accounts with manualAdjustment: {[a['manualAdjustment'] for a in result]}")
         return jsonify(result), 200
         
     except Exception as e:
