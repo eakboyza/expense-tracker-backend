@@ -681,9 +681,12 @@ def update_account(account_id):
         if not cursor.fetchone():
             return jsonify({"error": "Account not found"}), 404
         
+        # ✅ รองรับ manual_adjustment และ last_adjustment
         cursor.execute('''
             UPDATE accounts 
-            SET name = %s, type = %s, icon = %s, initial_balance = %s, is_default = %s,
+            SET name = %s, type = %s, icon = %s, 
+                initial_balance = %s, manual_adjustment = %s, 
+                last_adjustment = %s, is_default = %s,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND user_id = %s
         ''', (
@@ -691,6 +694,8 @@ def update_account(account_id):
             data.get('type', 'savings'),
             data.get('icon', '🏦'),
             data.get('initialBalance', 0),
+            data.get('manualAdjustment', 0),      # ✅ เพิ่ม
+            data.get('lastAdjustment'),            # ✅ เพิ่ม
             data.get('isDefault', False),
             account_id,
             user_id
