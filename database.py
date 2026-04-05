@@ -243,9 +243,19 @@ def init_database():
             'table': 'transactions',  # ✅ เพิ่ม migration นี้
             'column': 'is_initial_balance',
             'definition': "BOOLEAN DEFAULT FALSE"
+        },
+         {
+        'table': 'accounts',
+        'column': 'manual_adjustment',
+        'definition': 'DECIMAL(10,2) DEFAULT 0 AFTER initial_balance'
+        },
+        {
+            'table': 'accounts',
+            'column': 'last_adjustment',
+            'definition': 'TIMESTAMP NULL DEFAULT NULL AFTER manual_adjustment'
         }
-
     ]
+    
     
     # ✅ แก้ไข indent ให้ถูกต้อง
     for mig in migrations:
