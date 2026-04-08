@@ -102,9 +102,6 @@ def create_default_user_data(user_id):
 # AUTHENTICATION API (มีอยู่แล้ว)
 # ============================================
 
-@app.route("/api/health")
-def health():
-    return {"status": "ok"}, 200
 
 @app.route('/api/register', methods=['POST'])
 def register():
