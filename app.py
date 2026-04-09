@@ -8,7 +8,7 @@ from datetime import datetime
 import mysql.connector
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "https://fronflowwallet.pages.dev/"}})
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # เรียกตอนเริ่มระบบ
 init_database()
@@ -101,7 +101,6 @@ def create_default_user_data(user_id):
 # ============================================
 # AUTHENTICATION API (มีอยู่แล้ว)
 # ============================================
-
 
 @app.route('/api/register', methods=['POST'])
 def register():
